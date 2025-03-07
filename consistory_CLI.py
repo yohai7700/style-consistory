@@ -6,14 +6,22 @@
 import os
 import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
+import torch
 
 def run_batch(gpu, seed=40, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
               out_dir = None):
     
+    print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu)
-    prompts = [f'{style}{subject} {setting}' for setting in settings]
+    # prompts = [f'{style}{subject} {setting}' for setting in settings]
+    prompts = ["a B&W sketch of a woman on the beach", 
+               "a realistic photo of a woman walking in the snow",
+               "a watercolor painting of a woman in the forest",
+               "a cartoon of a woman in the eating pasta"
+              ]
+    concept_token=['woman']
 
     images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent)
 
@@ -68,6 +76,10 @@ if __name__ == '__main__':
     parser.add_argument('--out_dir', default=None, type=str, required=False)
 
     args = parser.parse_args()
+    
+    for concept in args.concept_token:
+        if concept not in args.subject:
+            print("Concept token should be part of the subject")
 
     if args.out_dir is not None:
         os.makedirs(args.out_dir, exist_ok=True)
