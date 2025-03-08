@@ -8,7 +8,7 @@ import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
 import torch
 
-def run_batch(gpu, seed=40, mask_dropout=0.5, same_latent=False,
+def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
               out_dir = None):
@@ -16,12 +16,13 @@ def run_batch(gpu, seed=40, mask_dropout=0.5, same_latent=False,
     print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu)
     # prompts = [f'{style}{subject} {setting}' for setting in settings]
-    prompts = ["a B&W sketch of a woman on the beach", 
-               "a realistic photo of a woman walking in the snow",
-               "a watercolor painting of a woman in the forest",
-               "a cartoon of a woman in the eating pasta"
+    prompts = [
+            "B&W sketch of a dog on the beach", 
+            "realistic photo of a dog walking in the snow",
+            "a watercolor painting of a dog in the forest",
+            "a cartoon of a dog eating pasta"
               ]
-    concept_token=['woman']
+    concept_token=['dog']
 
     images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent)
 
