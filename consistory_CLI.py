@@ -3,6 +3,8 @@
 # This work is licensed under the LICENSE file
 # located at the root directory.
 
+import datetime
+import json
 import os
 import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
@@ -19,8 +21,8 @@ def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
     prompts = [
             "B&W sketch of a dog on the beach", 
             "realistic photo of a dog walking in the snow",
-            "a watercolor painting of a dog in the forest",
-            "a cartoon of a dog eating pasta"
+            "comic book illustration of a dog in the city",
+            # "a cartoon of a dog eating pasta"
               ]
     concept_token=['dog']
 
@@ -82,8 +84,14 @@ if __name__ == '__main__':
         if concept not in args.subject:
             print("Concept token should be part of the subject")
 
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    args.out_dir += f"/{'-'.join(args.concept_token)}_{timestamp}_seed{args.seed}"
     if args.out_dir is not None:
         os.makedirs(args.out_dir, exist_ok=True)
+        
+    metadata_path = os.path.join(args.out_dir, f"metadata.json")
+    with open(metadata_path, mode="w", newline="") as file:
+        json.dump(vars(args), file, indent=4)
 
     if args.run_type == "batch":
         run_batch(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
