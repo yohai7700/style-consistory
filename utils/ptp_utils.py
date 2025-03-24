@@ -230,3 +230,9 @@ class AttentionStore:
                         output_attn_mask[0, attn_mask[i], k*n_patches:(k+1)*n_patches] = attn_mask[j].unsqueeze(0).expand(attn_mask[i].sum(), -1)
 
         return output_attn_mask
+    
+    def get_attn_mask(self, width, i):
+        attn_mask = self.last_mask_dropout[width]
+        if attn_mask is None:
+            return None
+        return attn_mask[i]

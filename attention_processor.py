@@ -16,13 +16,14 @@
 # Changes made by NVIDIA CORPORATION & AFFILIATES enabling ConsiStory or otherwise documented as NVIDIA-proprietary
 # are not a contribution and subject to the license under the LICENSE file located at the root directory.
 
-
 from diffusers.utils import USE_PEFT_BACKEND
 from typing import Callable, Optional
 import torch
 from diffusers.models.attention_processor import Attention
 
+from adain import adain_style
 from consistory_utils import AnchorCache, FeatureInjector, QueryStore, xformers
+from utils.ptp_utils import AttentionStore
 
 
 class ConsistoryAttnStoreProcessor:
@@ -76,7 +77,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             operator.
     """
 
-    def __init__(self, place_in_unet, attnstore, extended_attn_kwargs, attention_op: Optional[Callable] = None):
+    def __init__(self, place_in_unet, attnstore: AttentionStore, extended_attn_kwargs, attention_op: Optional[Callable] = None):
         self.attention_op = attention_op
         self.t_range = extended_attn_kwargs.get('t_range', [])
         self.extend_kv_unet_parts = extended_attn_kwargs.get('extend_kv_unet_parts', ['down', 'mid', 'up'])
@@ -84,6 +85,9 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         self.place_in_unet = place_in_unet
         self.curr_unet_part = self.place_in_unet.split('_')[0]
         self.attnstore = attnstore
+        
+        self.keys_cache = None
+        self.values_cache = None
 
     def __call__(
         self,
@@ -97,6 +101,9 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         query_store: Optional[QueryStore] = None,
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
+        perform_kv_adain: bool = True,
+        perform_kv_adain_raw: bool = True,
+        perform_background_adain: bool = True,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -140,10 +147,6 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
         query = attn.to_q(hidden_states, *args)
 
-        if (self.curr_unet_part in self.extend_kv_unet_parts) and query_store and query_store.mode == 'cache':
-            query_store.cache_query(query, self.place_in_unet)
-        elif perform_extend_attn and query_store and query_store.mode == 'inject':
-            query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
 
         if encoder_hidden_states is None:
             encoder_hidden_states = hidden_states
@@ -152,6 +155,18 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
         key = attn.to_k(encoder_hidden_states, *args)
         value = attn.to_v(encoder_hidden_states, *args)
+        
+        if (self.curr_unet_part in self.extend_kv_unet_parts) and query_store and query_store.mode == 'cache':
+            self.keys_cache = key
+            self.values_cache = value
+            query_store.cache_query(query, self.place_in_unet)
+        elif perform_extend_attn and query_store and query_store.mode == 'inject':
+            query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
+            # if self.keys_cache is not None and self.values_cache is not None:
+            #     key = adain_style(key, self.keys_cache)
+            #     value = adain_style(value, self.values_cache)
+            #     self.keys_cache = None
+            #     self.values_cache = None
 
         query = attn.head_to_batch_dim(query).contiguous()
 
@@ -191,24 +206,49 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
                 # Pre-allocate the output tensor
                 ex_out = torch.empty_like(query)
-
+                
+                vanilla_v = None
+                vanilla_k = None
+                # print(f"Key SDSA attention ({self.attnstore.curr_iter}): {self.place_in_unet}: {key.shape}")
                 for i in range(batch_size):
                     start_idx = i * attn.heads
                     end_idx = start_idx + attn.heads
 
+                    local_index = i%(batch_size//2)
                     attention_mask = self.attnstore.get_extended_attn_mask_instance(width, i%(batch_size//2))
-
+                    subject_mask = self.attnstore.get_attn_mask(width, local_index)
                     curr_q = query[start_idx:end_idx]
 
                     if i < batch_size//2:
                         curr_k = key[:batch_size//2]
                         curr_v = value[:batch_size//2]
+                        # if self.keys_cache is not None and self.values_cache is not None:
+                        #     vanilla_k = self.keys_cache[:batch_size//2]
+                        #     vanilla_v = self.values_cache[:batch_size//2]
                     else:
                         curr_k = key[batch_size//2:]
                         curr_v = value[batch_size//2:]
+                        # if self.keys_cache is not None and self.values_cache is not None:
+                        #     vanilla_k = self.keys_cache[batch_size//2:]
+                        #     vanilla_v = self.values_cache[batch_size//2:]
+                        
+                    # if vanilla_k is not None and vanilla_v is not None:
+                    #     curr_k = adain_style(curr_k, vanilla_k)
+                    #     curr_v = adain_style(curr_v, vanilla_v)
+                    
+                    if perform_background_adain:
+                        background_k = curr_k[local_index][~subject_mask]
+                        background_v = curr_v[local_index][~subject_mask]
 
-                    curr_k = curr_k.flatten(0,1)[attention_mask].unsqueeze(0)
-                    curr_v = curr_v.flatten(0,1)[attention_mask].unsqueeze(0)
+                    curr_k = curr_k.flatten(0,1)[attention_mask]
+                    curr_v = curr_v.flatten(0,1)[attention_mask]
+                    
+                    if perform_background_adain:
+                        curr_k = adain_style(curr_k, background_k)
+                        curr_v = adain_style(curr_v, background_v)
+                    
+                    curr_k = curr_k.unsqueeze(0)
+                    curr_v = curr_v.unsqueeze(0)
 
                     curr_k = attn.head_to_batch_dim(curr_k).contiguous()
                     curr_v = attn.head_to_batch_dim(curr_v).contiguous()
@@ -219,9 +259,16 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     )
 
                     ex_out[start_idx:end_idx] = hidden_states
+                    
+                if self.keys_cache is not None and self.values_cache is not None:
+                    self.keys_cache = None
+                    self.values_cache = None
 
                 hidden_states = ex_out
         else:
+            # self.keys_cache = key
+            # self.values_cache = value
+            # print(f"Key normal attention ({self.attnstore.curr_iter}): {self.place_in_unet}: {key.shape}")
             key = attn.head_to_batch_dim(key).contiguous()
             value = attn.head_to_batch_dim(value).contiguous()
 

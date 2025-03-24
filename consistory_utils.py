@@ -9,6 +9,7 @@ from collections import defaultdict
 from diffusers.utils.import_utils import is_xformers_available
 from typing import Optional, List
 
+from adain import adain_style
 from utils.general_utils import get_dynamic_threshold
 
 if is_xformers_available():
@@ -18,7 +19,7 @@ else:
     xformers = None
 
 class FeatureInjector:
-    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up']):
+    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up'], background_adain=False):
         self.nn_map = nn_map
         self.nn_distances = nn_distances
         self.attn_masks = attn_masks
@@ -28,6 +29,7 @@ class FeatureInjector:
         self.dist_thr = dist_thr
         self.inject_unet_parts = inject_unet_parts
         self.inject_res = [64]
+        self.background_adain = background_adain
 
     def inject_outputs(self, output, curr_iter, output_res, extended_mapping, place_in_unet, anchors_cache=None):
         curr_unet_part = place_in_unet.split('_')[0]
@@ -64,7 +66,10 @@ class FeatureInjector:
                     final_mask_tgt = attn_masks[i] & dist_mask
 
                     other_outputs = old_output[curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-
+                    
+                    if self.background_adain:
+                        other_outputs = adain_style(other_outputs, old_output[i][final_mask_tgt])
+                    
                     output[i][final_mask_tgt] = alpha * other_outputs + (1 - alpha)*old_output[i][final_mask_tgt]
 
             if anchors_cache and anchors_cache.is_cache_mode():

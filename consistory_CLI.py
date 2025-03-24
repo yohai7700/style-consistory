@@ -11,22 +11,23 @@ from consistory_run import load_pipeline, run_batch_generation, run_anchor_gener
 import torch
 
 def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
-              style="A photo of ", subject="a cute dog", concept_token=['dog'],
+              style="A photo of ", subject="dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
-              out_dir = None):
+              out_dir = None, perform_feature_injection_bg_adain=False):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu)
     # prompts = [f'{style}{subject} {setting}' for setting in settings]
+    
     prompts = [
-            "B&W sketch of a dog on the beach", 
-            "realistic photo of a dog walking in the snow",
-            "comic book illustration of a dog in the city",
-            # "a cartoon of a dog eating pasta"
-              ]
-    concept_token=['dog']
+                f"B&W sketch of {subject} on the beach", 
+                f"realistic photo of {subject} walking in the snow",
+                f"comic book illustration of {subject} in the forest",
+                f"a cartoon of {subject} eating pasta"
+            ]
+    # concept_token=['dog']
 
-    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent)
+    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, perform_feature_injection_bg_adain=perform_feature_injection_bg_adain)
 
     if out_dir is not None:
         for i, image in enumerate(images):
@@ -75,8 +76,10 @@ if __name__ == '__main__':
     parser.add_argument('--settings', default=["sitting in the beach", "standing in the snow"], 
                         type=str, nargs='*', required=False)
     parser.add_argument('--cache_cpu_offloading', default=False, type=bool, required=False)
+    parser.add_argument('--perform_feature_injection_bg_adain', default=False, type=bool, required=False)
     
     parser.add_argument('--out_dir', default=None, type=str, required=False)
+    parser.add_argument('--perform_background_adain', default=True, type=bool, required=False)
 
     args = parser.parse_args()
     
@@ -95,7 +98,7 @@ if __name__ == '__main__':
 
     if args.run_type == "batch":
         run_batch(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
-                  args.subject, args.concept_token, args.settings, args.out_dir)
+                  args.subject, args.concept_token, args.settings, args.out_dir, args.perform_feature_injection_bg_adain)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
                            args.subject, args.concept_token, args.settings, args.cache_cpu_offloading, args.out_dir)

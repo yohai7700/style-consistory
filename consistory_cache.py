@@ -91,7 +91,7 @@ def run_anchor_generation(story_pipeline, prompts, concept_token,
     }
 
     default_extended_attn_kwargs = {'extend_kv_unet_parts': ['up']}
-    query_store_kwargs={'t_range': [0,n_steps//10], 'strength_start': 0.9, 'strength_end': 0.81836735}
+    query_store_kwargs={'t_range': [0,n_steps], 'strength_start': 0.9, 'strength_end': 0.81836735}
 
     latents, g = create_latents(story_pipeline, seed, batch_size, same_latent, device, float_type)
 
