@@ -75,7 +75,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=20, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_injection=True,
-                        downscale_rate=4, n_achors=2, perform_feature_injection_bg_adain=False):
+                        downscale_rate=4, n_achors=2, background_adain=None):
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
     float_type = story_pipeline.dtype
@@ -127,7 +127,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     
     if perform_injection:
         feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
-                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=perform_feature_injection_bg_adain)
+                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain)
 
         out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                             attention_store_kwargs=default_attention_store_kwargs,

@@ -27,7 +27,7 @@ def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
             ]
     # concept_token=['dog']
 
-    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, perform_feature_injection_bg_adain=perform_feature_injection_bg_adain)
+    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain='post')
 
     if out_dir is not None:
         for i, image in enumerate(images):
