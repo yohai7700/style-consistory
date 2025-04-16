@@ -19,7 +19,7 @@ else:
     xformers = None
 
 class FeatureInjector:
-    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up'], background_adain=False):
+    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up'], background_adain=None):
         self.nn_map = nn_map
         self.nn_distances = nn_distances
         self.attn_masks = attn_masks
