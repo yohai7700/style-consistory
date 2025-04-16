@@ -72,7 +72,7 @@ def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_
 
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=20, mask_dropout=0.5,
+                        seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_injection=True,
                         downscale_rate=4, n_achors=2, background_adain=None):
