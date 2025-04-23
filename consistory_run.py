@@ -20,6 +20,7 @@ def load_pipeline(gpu_id=0):
     sd_id = "stabilityai/stable-diffusion-xl-base-1.0"
     
     device = torch.device(f'cuda:{gpu_id}') if torch.cuda.is_available() else torch.device('cpu')
+    # device = torch.device('cpu')
     unet = ConsistorySDXLUNet2DConditionModel.from_pretrained(sd_id, subfolder="unet", torch_dtype=float_type)
     scheduler = DDIMScheduler.from_pretrained(sd_id, subfolder="scheduler")
 
@@ -54,7 +55,7 @@ def create_token_indices(prompts, batch_size, concept_token, tokenizer):
 def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_type):
     # if seed is int
     if isinstance(seed, int):
-        g = torch.Generator('cuda').manual_seed(seed)
+        g = torch.Generator(device).manual_seed(seed)
         shape = (batch_size, story_pipeline.unet.config.in_channels, 128, 128)
         latents = randn_tensor(shape, generator=g, device=device, dtype=float_type)
     elif isinstance(seed, list):
@@ -72,7 +73,7 @@ def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_
 
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=50, mask_dropout=0.5,
+                        seed=40, n_steps=20, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_injection=True,
                         downscale_rate=4, n_achors=2, background_adain=None):
@@ -114,10 +115,11 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
-    dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
+    dift_features = unet.latent_store.dift_features['201_0'][batch_size:]
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
+    first_img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -127,7 +129,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     
     if perform_injection:
         feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
-                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain)
+                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 
         out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                             attention_store_kwargs=default_attention_store_kwargs,
@@ -144,7 +146,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     else:
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
     
-    return out.images, img_all
+    return out.images, img_all, first_img_all
 
 # Anchors
 def run_anchor_generation(story_pipeline, prompts, concept_token,

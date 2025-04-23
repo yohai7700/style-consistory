@@ -20,18 +20,20 @@ def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
     # prompts = [f'{style}{subject} {setting}' for setting in settings]
     
     prompts = [
-                f"B&W sketch of {subject} on the beach", 
-                f"realistic photo of {subject} walking in the snow",
-                f"comic book illustration of {subject} in the forest",
+                f"realistic photo of {subject} on the beach", 
+                # f"B&W sketch of {subject} walking in the snow",
+                # f"comic book illustration of {subject} in the forest",
                 f"a cartoon of {subject} eating pasta"
             ]
     # concept_token=['dog']
 
-    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain='post')
+    images, image_all, first_image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
 
     if out_dir is not None:
         for i, image in enumerate(images):
             image.save(f'{out_dir}/image_{i}.png')
+    image_all.save(f'{out_dir}/image_all.png')    
+    first_image_all.save(f'{out_dir}/first_image_all.png')    
 
     return images, image_all
 

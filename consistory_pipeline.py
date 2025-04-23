@@ -31,6 +31,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from attention_processor import register_extended_self_attn
 from consistory_utils import FeatureInjector, AnchorCache, QueryStore
 from utils.ptp_utils import AttentionStore
+import matplotlib.pyplot as plt
 
 if is_torch_xla_available():
     # import torch_xla.core.xla_model as xm
@@ -486,6 +487,25 @@ class ConsistoryExtendAttnSDXLPipeline(
                 
                 # Update attention store mask
                 self.attention_store.aggregate_last_steps_attention()
+                
+                # for res in self.attention_store.last_mask_dropout:
+                #     # Retrieve the i-th attention mask from the store (adjust attribute name if needed)
+                #     if self.attention_store.last_mask_dropout[res] is None:
+                #         continue
+                    
+                #     for image_i in range(len(self.attention_store.last_mask_dropout[res])):
+                #         mask = self.attention_store.last_mask_dropout[res][image_i]
+                #         mask_np = mask.detach().cpu().numpy()
+
+                #         # Normalize the mask to the [0, 1] range for visualization
+                #         # mask_np = (mask_np - mask_np.min()) / (mask_np.max() - mask_np.min() + 1e-8)
+                        
+                #         mask_np = mask_np.reshape(res, res)
+
+                #         plt.imshow(mask_np, cmap="viridis")
+                #         plt.axis("off")
+                #         plt.savefig(f"attention_mask_{i}_{image_i}_{res}.png", bbox_inches="tight", pad_inches=0)
+                #         plt.close()
 
         if not output_type == "latent":
             # make sure the VAE is in float32 mode, as it overflows in float16

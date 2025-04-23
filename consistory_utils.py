@@ -19,7 +19,7 @@ else:
     xformers = None
 
 class FeatureInjector:
-    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up'], background_adain=None):
+    def __init__(self, nn_map, nn_distances, attn_masks, inject_range_alpha=[(10,20,0.8)], swap_strategy='min', dist_thr='dynamic', inject_unet_parts=['up'], background_adain=None, background_self_alignment_range=(15, 20)):
         self.nn_map = nn_map
         self.nn_distances = nn_distances
         self.attn_masks = attn_masks
@@ -30,6 +30,33 @@ class FeatureInjector:
         self.inject_unet_parts = inject_unet_parts
         self.inject_res = [64]
         self.background_adain = background_adain
+        self.background_self_alignment_range = background_self_alignment_range
+        
+    def get_nn_map(self, i, output_res, extended_mapping):
+        if output_res not in self.inject_res:
+            return None
+        
+        nn_map = self.nn_map[output_res]
+        nn_distances = self.nn_distances[output_res]
+        attn_masks = self.attn_masks[output_res]
+        vector_dim = output_res**2
+        
+        curr_mapping = extended_mapping[i]
+
+        # If the current image is not mapped to any other image, skip
+        if not torch.any(torch.cat([curr_mapping[:i], curr_mapping[i+1:]])):
+            return None
+
+        min_dists = nn_distances[i][curr_mapping].argmin(dim=0)
+        curr_nn_map = nn_map[i][curr_mapping][min_dists, torch.arange(vector_dim)]
+
+        curr_nn_distances = nn_distances[i][curr_mapping][min_dists, torch.arange(vector_dim)]
+        dist_thr = get_dynamic_threshold(curr_nn_distances) if self.dist_thr == 'dynamic' else self.dist_thr
+        dist_mask = curr_nn_distances < dist_thr
+        final_mask_tgt = attn_masks[i] & dist_mask
+        
+        return curr_mapping, min_dists, curr_nn_map, final_mask_tgt
+        
 
     def inject_outputs(self, output, curr_iter, output_res, extended_mapping, place_in_unet, anchors_cache=None):
         curr_unet_part = place_in_unet.split('_')[0]
@@ -88,6 +115,22 @@ class FeatureInjector:
 
                 anchors_cache.h_out_cache[place_in_unet][curr_iter] = output
 
+        return output
+    
+    def align_self_background(self, output, curr_iter, output_res):
+        bsz = output.shape[0]
+        if not (curr_iter  >= self.background_self_alignment_range[0] and curr_iter <= self.background_self_alignment_range[1]):
+            return output
+        
+        if output_res != 64:
+            return output
+
+        attn_masks = self.attn_masks[output_res]
+
+        for i in range(bsz):
+            mask = attn_masks[i]
+            style_reference = output[i][~mask]
+            output[i][mask] = adain_style(output[i][mask], style_reference)
         return output
 
     def inject_anchors(self, output, curr_iter, output_res, extended_mapping, place_in_unet, anchors_cache):
