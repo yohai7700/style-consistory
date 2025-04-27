@@ -69,7 +69,12 @@ class ConsistoryAttnStoreProcessor:
         #         attention_probs[i * attn.heads + head] = attention_probs[0 + head]
                 
         # attention_probs = attention_probs.reshape((batch_size * attn.heads, sequence_length, token_sequence_length))
-            
+        if False and 0 <= self.attnstore.curr_iter <= 50:
+            weights = torch.ones(attention_probs.size(2), dtype=torch.float16).to(attention_probs.device)
+            weights[0] = 10
+            weights[1] = 10
+            weights[2] = 10
+            attention_probs = attention_probs * weights
         hidden_states = torch.bmm(attention_probs, value)
         hidden_states = attn.batch_to_head_dim(hidden_states)
 
@@ -184,7 +189,6 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             #     self.keys_cache = None
             #     self.values_cache = None
 
-
         if perform_extend_attn:
             # Anchor Caching
             # if anchors_cache and anchors_cache.is_cache_mode():
@@ -281,30 +285,36 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
             #     hidden_states = ex_out
             
-            if 0 <= self.attnstore.curr_iter <= 20:
-                for i in range(batch_size // 2 + 1, batch_size):
-                    local_index = i%(batch_size//2)
-                    subject_mask = self.attnstore.get_attn_mask(width, local_index)
-                    reference_index = 0 if i < batch_size//2 else batch_size//2
-                    if reference_index == i:
-                        continue
-                    
-                    if feature_injector is None:
-                        break
-                    
-                    nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
-                    if nn_map is None:
-                        continue
-                    
-                    curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
-                    query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    
-                    # print(f"subject mask {i} - {subject_mask.sum() / subject_mask.size(0)}")
-                    # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-                    # value[i][subject_mask] = value[reference_index][subject_mask].clone()
-                    # query[i][subject_mask] = query[reference_index][subject_mask].clone()
-                    # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-                    # value[i][subject_mask] = value[reference_index][subject_mask].clone()
+            curr_unet_part = self.place_in_unet.split('_')[0]
+            if curr_unet_part == 'up' and 0 <= self.attnstore.curr_iter <= 50 and width == 64:
+              for i in range(batch_size //2, batch_size):
+                local_index = i%(batch_size//2)
+                subject_mask = self.attnstore.get_attn_mask(width, local_index)
+                # reference_index = 0 if i < batch_size//2 else batch_size//2
+                # if reference_index == i:
+                #     continue
+                
+                if feature_injector is None:
+                    break
+                
+                nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
+                if nn_map is None:
+                    continue
+                
+                curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
+                # if 0 <= self.attnstore.curr_iter <= 5:
+                #   query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                if 0 <= self.attnstore.curr_iter <= 20:
+                  key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                if 0 <= self.attnstore.curr_iter <= 20:
+                  value[i][final_mask_tgt] = 0 * value[i][final_mask_tgt]
+                
+                # print(f"subject mask {i} - {subject_mask.sum() / subject_mask.size(0)}")
+                # key[i][subject_mask] = key[reference_index][subject_mask].clone()
+                # value[i][subject_mask] = value[reference_index][subject_mask].clone()
+                # query[i][subject_mask] = query[reference_index][subject_mask].clone()
+                # key[i][subject_mask] = key[reference_index][subject_mask].clone()
+                # value[i][subject_mask] = value[reference_index][subject_mask].clone()
 
             query = attn.head_to_batch_dim(query).contiguous()
             key = attn.head_to_batch_dim(key).contiguous()
