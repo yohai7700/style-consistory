@@ -183,21 +183,10 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             query_store.cache_query(query, self.place_in_unet)
         elif perform_extend_attn and query_store and query_store.mode == 'inject':
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
-            # if self.keys_cache is not None and self.values_cache is not None:
-            #     key = adain_style(key, self.keys_cache)
-            #     value = adain_style(value, self.values_cache)
-            #     self.keys_cache = None
-            #     self.values_cache = None
             
-            curr_unet_part = self.place_in_unet.split('_')[0]
-            if curr_unet_part == 'up' and 0 <= self.attnstore.curr_iter <= 50 and width == 64:
-              for i in range(batch_size //2, batch_size):
-                local_index = i%(batch_size//2)
-                subject_mask = self.attnstore.get_attn_mask(width, local_index)
-                # reference_index = 0 if i < batch_size//2 else batch_size//2
-                # if reference_index == i:
-                #     continue
-                
+        curr_unet_part = self.place_in_unet.split('_')[0]
+        if curr_unet_part == 'up' and width == 64:
+            for i in range(batch_size //2, batch_size):
                 if feature_injector is None:
                     break
                 
@@ -209,20 +198,21 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 # if 0 <= self.attnstore.curr_iter <= 5:
                 #   query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 if 0 <= self.attnstore.curr_iter <= 20:
-                  key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 if 0 <= self.attnstore.curr_iter <= 20:
-                  value[i][final_mask_tgt] = 0 * value[i][final_mask_tgt]
-                
-                # print(f"subject mask {i} - {subject_mask.sum() / subject_mask.size(0)}")
-                # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-                # value[i][subject_mask] = value[reference_index][subject_mask].clone()
-                # query[i][subject_mask] = query[reference_index][subject_mask].clone()
-                # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-                # value[i][subject_mask] = value[reference_index][subject_mask].clone()
+                    value[i][final_mask_tgt] = 0 * value[i][final_mask_tgt]
+            
+            # print(f"subject mask {i} - {subject_mask.sum() / subject_mask.size(0)}")
+            # key[i][subject_mask] = key[reference_index][subject_mask].clone()
+            # value[i][subject_mask] = value[reference_index][subject_mask].clone()
+            # query[i][subject_mask] = query[reference_index][subject_mask].clone()
+            # key[i][subject_mask] = key[reference_index][subject_mask].clone()
+            # value[i][subject_mask] = value[reference_index][subject_mask].clone()
 
-            query = attn.head_to_batch_dim(query).contiguous()
-            key = attn.head_to_batch_dim(key).contiguous()
-            value = attn.head_to_batch_dim(value).contiguous()
+        query = attn.head_to_batch_dim(query).contiguous()
+
+        if perform_extend_attn:
+            # Anchor Caching
             if anchors_cache and anchors_cache.is_cache_mode():
                 if self.place_in_unet not in anchors_cache.input_h_cache:
                     anchors_cache.input_h_cache[self.place_in_unet] = {}
@@ -289,30 +279,18 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                             op=self.attention_op, scale=attn.scale
                         )
                     else:
-                        attention_probs = attn.get_attention_scores(curr_q, curr_k, attention_mask)
+                        attention_probs = attn.get_attention_scores(curr_q, curr_k)
                         hidden_states = torch.bmm(attention_probs, curr_v)
-
-            # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
-            hidden_states = xformers.ops.memory_efficient_attention(
-                query, key, value, op=self.attention_op, scale=attn.scale
-            )
-
         else:
-            # self.keys_cache = key
-            # self.values_cache = value
-            # print(f"Key normal attention ({self.attnstore.curr_iter}): {self.place_in_unet}: {key.shape}")
-            query = attn.head_to_batch_dim(query).contiguous()
-            key = attn.head_to_batch_dim(key).contiguous()
-            value = attn.head_to_batch_dim(value).contiguous()
-
             # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
             if hidden_states.dtype == torch.float16:
                 hidden_states = xformers.ops.memory_efficient_attention(
                 query, key, value, op=self.attention_op, scale=attn.scale
             )
-
             else:
-                attention_probs = attn.get_attention_scores(query, key, attention_mask)
+                key = attn.head_to_batch_dim(key).contiguous()
+                value = attn.head_to_batch_dim(value).contiguous()
+                attention_probs = attn.get_attention_scores(query, key)
                 hidden_states = torch.bmm(attention_probs, value)
 
         hidden_states = hidden_states.to(query.dtype)
