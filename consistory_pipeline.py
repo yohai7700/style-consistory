@@ -90,7 +90,8 @@ class ConsistoryExtendAttnSDXLPipeline(
         query_store_kwargs: Optional[Dict] = {},
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
-
+        use_styled_feature_injection: bool = False,
+        use_consistory_feature_injection: bool = False,
         instance_latents: Optional[torch.FloatTensor] = None,
         **kwargs,
     ):
@@ -439,7 +440,9 @@ class ConsistoryExtendAttnSDXLPipeline(
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
                                                 'perform_extend_attn': True, 
-                                                'record_attention': True, 
+                                                'record_attention': True,
+                                                'use_consistory_feature_injection': use_consistory_feature_injection,
+                                                'use_styled_feature_injection': use_styled_feature_injection,
                                                 'feature_injector': feature_injector,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,

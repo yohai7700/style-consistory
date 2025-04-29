@@ -54,27 +54,6 @@ class ConsistoryAttnStoreProcessor:
         if record_attention:
             self.attnstore(attention_probs, is_cross, self.place_in_unet, attn.heads)
 
-        # token_sequence_length = attention_probs.size(2)
-        # attention_probs = attention_probs.reshape((batch_size, attention_probs.size(2), attn.heads, sequence_length))
-        # for token_idx in self.attnstore.token_indices:
-        #     for i in range(batch_size):
-        #         local_index = i%(batch_size//2)
-        #         prompt_token_idx = token_idx[local_index]
-        #         reference_index = 0 if i < batch_size//2 else batch_size//2
-        #         reference_token_index = token_idx[0]
-        #         attention_probs[i] = attention_probs[reference_index]
-        
-        # for i in range(batch_size):
-        #     for head in range(attn.heads):
-        #         attention_probs[i * attn.heads + head] = attention_probs[0 + head]
-                
-        # attention_probs = attention_probs.reshape((batch_size * attn.heads, sequence_length, token_sequence_length))
-        if False and 0 <= self.attnstore.curr_iter <= 50:
-            weights = torch.ones(attention_probs.size(2), dtype=torch.float16).to(attention_probs.device)
-            weights[0] = 10
-            weights[1] = 10
-            weights[2] = 10
-            attention_probs = attention_probs * weights
         hidden_states = torch.bmm(attention_probs, value)
         hidden_states = attn.batch_to_head_dim(hidden_states)
 
@@ -122,9 +101,9 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         query_store: Optional[QueryStore] = None,
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
-        perform_kv_adain: bool = True,
-        perform_kv_adain_raw: bool = True,
         perform_background_adain: bool = True,
+        use_styled_feature_injection: bool = False,
+        use_consistory_feature_injection: bool = False,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -185,7 +164,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
             
         curr_unet_part = self.place_in_unet.split('_')[0]
-        if curr_unet_part == 'up' and width == 64:
+        if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
             for i in range(batch_size //2, batch_size):
                 if feature_injector is None:
                     break
@@ -200,7 +179,8 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 if 5 <= self.attnstore.curr_iter <= 17:
                     key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 if 5 <= self.attnstore.curr_iter <= 17:
-                    value[i][final_mask_tgt] = 0 * value[i][final_mask_tgt]
+                    other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    value[i][final_mask_tgt] = other_value
 
         query = attn.head_to_batch_dim(query).contiguous()
 
@@ -300,13 +280,13 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         # dropout
         hidden_states = attn.to_out[1](hidden_states)
 
-        # if (feature_injector is not None):
-        #     output_res = int(hidden_states.shape[1] ** 0.5)
+        if (feature_injector is not None) and use_consistory_feature_injection:
+            output_res = int(hidden_states.shape[1] ** 0.5)
 
-        #     if anchors_cache and anchors_cache.is_inject_mode():
-        #         hidden_states[batch_size//2:] = feature_injector.inject_anchors(hidden_states[batch_size//2:], self.attnstore.curr_iter, output_res, self.attnstore.extended_mapping, self.place_in_unet, anchors_cache)
-        #     else:
-        #         hidden_states[batch_size//2:] = feature_injector.inject_outputs(hidden_states[batch_size//2:], self.attnstore.curr_iter, output_res, self.attnstore.extended_mapping, self.place_in_unet, anchors_cache)
+            if anchors_cache and anchors_cache.is_inject_mode():
+                hidden_states[batch_size//2:] = feature_injector.inject_anchors(hidden_states[batch_size//2:], self.attnstore.curr_iter, output_res, self.attnstore.extended_mapping, self.place_in_unet, anchors_cache)
+            else:
+                hidden_states[batch_size//2:] = feature_injector.inject_outputs(hidden_states[batch_size//2:], self.attnstore.curr_iter, output_res, self.attnstore.extended_mapping, self.place_in_unet, anchors_cache)
 
         if input_ndim == 4:
             hidden_states = hidden_states.transpose(-1, -2).reshape(batch_size, channel, height, width)

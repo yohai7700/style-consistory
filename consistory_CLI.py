@@ -27,15 +27,12 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
             ]
     # concept_token=['dog']
 
-    images, image_all, first_image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
+    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
 
-    if out_dir is not None:
-        for i, image in enumerate(images):
-            image.save(f'{out_dir}/image_{i}.png')
-    image_all.save(f'{out_dir}/image_all.png')    
-    first_image_all.save(f'{out_dir}/first_image_all.png')    
+    for result in results:
+        result.save(out_dir)
 
-    return images, image_all
+    return results
 
 def run_cached_anchors(gpu, float_type, seed=40, mask_dropout=0.5, same_latent=False,
                 style="A photo of ", subject="a cute dog", concept_token=['dog'],

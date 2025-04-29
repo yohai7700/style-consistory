@@ -71,11 +71,23 @@ def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_
 
     return latents, g
 
+
+class GenerationResult:
+    def __init__(self, name: str, images, image_all):
+        self.images = images
+        self.image_all = image_all
+        self.name = name
+
+    def save(self, out_dir):
+        for i, image in enumerate(self.images):
+            image.save(f'{out_dir}/{self.name}/image_{i}.png')
+        self.image_all.save(f'{out_dir}/{self.name}/all.png')
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
-                        perform_sdsa=True, perform_injection=True,
+                        perform_sdsa=True, perform_consistory_injection=True,
+                        perform_styled_injection=True,
                         downscale_rate=4, n_achors=2, background_adain=None):
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
@@ -101,6 +113,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     # ------------------ #
     # Extended attention First Run #
 
+    results: List[GenerationResult] = []
     if perform_sdsa:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': [(1, n_steps)]}
     else:
@@ -119,7 +132,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
-    first_img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+    classic_image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+    results.append(GenerationResult('classic', out.images, classic_image_all))
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -127,7 +141,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     # ------------------ #
     # Extended attention with nn_map #
     
-    if perform_injection:
+    if perform_consistory_injection:
         feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
                                         swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 
@@ -137,20 +151,38 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             share_queries=share_queries,
                             query_store_kwargs=query_store_kwargs,
                             feature_injector=feature_injector,
+                            use_consistory_feature_injection=True,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
+        results.append(GenerationResult('consistory_feature_injection', out.images, img_all))
 
         torch.cuda.empty_cache()
         gc.collect()
-    else:
-        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
     
-    return out.images, img_all, first_img_all
+    if perform_styled_injection:
+        feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
+                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
+
+        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                            attention_store_kwargs=default_attention_store_kwargs,
+                            extended_attn_kwargs=extended_attn_kwargs,
+                            share_queries=share_queries,
+                            query_store_kwargs=query_store_kwargs,
+                            feature_injector=feature_injector,
+                            use_styled_feature_injection=True,
+                            num_inference_steps=n_steps)
+        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+        # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
+        results.append(GenerationResult('styled_feature_injection', out.images, img_all))
+
+        torch.cuda.empty_cache()
+        gc.collect()
+    return results
 
 # Anchors
 def run_anchor_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=50, mask_dropout=0.5,
+                        seed=40, n_steps=2, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_injection=True,
                         downscale_rate=4, cache_cpu_offloading=False):
