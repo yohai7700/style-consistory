@@ -15,8 +15,8 @@ from utils.ptp_utils import view_images
 
 LATENT_RESOLUTIONS = [32, 64]
 
-def load_pipeline(gpu_id=0):
-    float_type = torch.float16
+def load_pipeline(gpu_id=0, float_type=torch.float16):
+    
     sd_id = "stabilityai/stable-diffusion-xl-base-1.0"
     
     device = torch.device(f'cuda:{gpu_id}') if torch.cuda.is_available() else torch.device('cpu')
@@ -62,7 +62,7 @@ def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_
         shape = (batch_size, story_pipeline.unet.config.in_channels, 128, 128)
         latents = torch.empty(shape, device=device, dtype=float_type)
         for i, seed_i in enumerate(seed):
-            g = torch.Generator('cuda').manual_seed(seed_i)
+            g = torch.Generator(device).manual_seed(seed_i)
             curr_latent = randn_tensor(shape, generator=g, device=device, dtype=float_type)
             latents[i] = curr_latent[i]
 

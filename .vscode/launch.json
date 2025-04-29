@@ -5,13 +5,25 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug",
+            "name": "Python Debugger: Current File with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "args": [
+                "${command:pickArgs}"
+            ]
+        },
+        {
+            "name": "run consistory",
             "type": "debugpy",
             "request": "launch",
             "program": "consistory_CLI.py",
             "console": "integratedTerminal",
+            "justMyCode": false,
             "args": [
                 "--subject", "a cute dog",
+                "--float_type", "32",
                 "--concept_token", "dog",
                 "--settings", "sitting in the beach", "in the circus",
                 "--out_dir", "out"
@@ -19,3 +31,9 @@
         }
     ]
 }
+
+    
+
+
+
+

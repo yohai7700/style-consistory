@@ -188,102 +188,6 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             #     value = adain_style(value, self.values_cache)
             #     self.keys_cache = None
             #     self.values_cache = None
-
-        if perform_extend_attn:
-            # Anchor Caching
-            # if anchors_cache and anchors_cache.is_cache_mode():
-            #     if self.place_in_unet not in anchors_cache.input_h_cache:
-            #         anchors_cache.input_h_cache[self.place_in_unet] = {}
-
-            #     # Hidden states inside the mask, for uncond (index 0) and cond (index 1) prompts
-            #     subjects_hidden_states = torch.stack([x[self.attnstore.last_mask_dropout[width]] for x in hidden_states.chunk(2)])
-            #     anchors_cache.input_h_cache[self.place_in_unet][self.attnstore.curr_iter] = subjects_hidden_states
-
-            # if anchors_cache and anchors_cache.is_inject_mode():
-            #     # We make extended key and value by concatenating the original key and value with the query.
-            #     anchors_hidden_states = anchors_cache.input_h_cache[self.place_in_unet][self.attnstore.curr_iter]
-
-            #     anchors_keys = attn.to_k(anchors_hidden_states, *args)
-            #     anchors_values = attn.to_v(anchors_hidden_states, *args)
-
-            #     extended_key = torch.cat([torch.cat([key.chunk(2, dim=0)[x], anchors_keys[x].unsqueeze(0)], dim=1) for x in range(2)])
-            #     extended_value = torch.cat([torch.cat([value.chunk(2, dim=0)[x], anchors_values[x].unsqueeze(0)], dim=1) for x in range(2)])
-
-            #     extended_key = attn.head_to_batch_dim(extended_key).contiguous()
-            #     extended_value = attn.head_to_batch_dim(extended_value).contiguous()
-
-            #     # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
-            #     hidden_states = xformers.ops.memory_efficient_attention(
-            #         query, extended_key, extended_value,  op=self.attention_op, scale=attn.scale
-            #     )
-            # else:
-            #     # # We make extended key and value by concatenating the original key and value with the query.
-            #     # attention_mask_bias = self.attnstore.get_attn_mask_bias(tgt_size = width, bsz = batch_size)
-
-            #     # if attention_mask_bias is not None:
-            #     #     attention_mask_bias = torch.cat([x.unsqueeze(0).expand(attn.heads, -1, -1) for x in attention_mask_bias])
-
-            #     # Pre-allocate the output tensor
-            #     ex_out = torch.empty_like(query)
-                
-            #     vanilla_v = None
-            #     vanilla_k = None
-            #     # print(f"Key SDSA attention ({self.attnstore.curr_iter}): {self.place_in_unet}: {key.shape}")
-            #     for i in range(batch_size):
-            #         start_idx = i * attn.heads
-            #         end_idx = start_idx + attn.heads
-
-            #         local_index = i%(batch_size//2)
-            #         attention_mask = self.attnstore.get_extended_attn_mask_instance(width, i%(batch_size//2))
-            #         subject_mask = self.attnstore.get_attn_mask(width, local_index)
-            #         curr_q = query[start_idx:end_idx]
-
-            #         if i < batch_size//2:
-            #             curr_k = key[:batch_size//2]
-            #             curr_v = value[:batch_size//2]
-            #             # if self.keys_cache is not None and self.values_cache is not None:
-            #             #     vanilla_k = self.keys_cache[:batch_size//2]
-            #             #     vanilla_v = self.values_cache[:batch_size//2]
-            #         else:
-            #             curr_k = key[batch_size//2:]
-            #             curr_v = value[batch_size//2:]
-            #             # if self.keys_cache is not None and self.values_cache is not None:
-            #             #     vanilla_k = self.keys_cache[batch_size//2:]
-            #             #     vanilla_v = self.values_cache[batch_size//2:]
-                        
-            #         # if vanilla_k is not None and vanilla_v is not None:
-            #         #     curr_k = adain_style(curr_k, vanilla_k)
-            #         #     curr_v = adain_style(curr_v, vanilla_v)
-                    
-            #         if perform_background_adain:
-            #             background_k = curr_k[local_index][~subject_mask]
-            #             background_v = curr_v[local_index][~subject_mask]
-
-            #         curr_k = curr_k.flatten(0,1)[attention_mask]
-            #         curr_v = curr_v.flatten(0,1)[attention_mask]
-                    
-            #         if perform_background_adain:
-            #             curr_k = adain_style(curr_k, background_k)
-            #             curr_v = adain_style(curr_v, background_v)
-                    
-            #         curr_k = curr_k.unsqueeze(0)
-            #         curr_v = curr_v.unsqueeze(0)
-
-            #         curr_k = attn.head_to_batch_dim(curr_k).contiguous()
-            #         curr_v = attn.head_to_batch_dim(curr_v).contiguous()
-
-            #         hidden_states = xformers.ops.memory_efficient_attention(
-            #             curr_q, curr_k, curr_v, 
-            #             op=self.attention_op, scale=attn.scale
-            #         )
-
-            #         ex_out[start_idx:end_idx] = hidden_states
-                    
-            #     if self.keys_cache is not None and self.values_cache is not None:
-            #         self.keys_cache = None
-            #         self.values_cache = None
-
-            #     hidden_states = ex_out
             
             curr_unet_part = self.place_in_unet.split('_')[0]
             if curr_unet_part == 'up' and 0 <= self.attnstore.curr_iter <= 50 and width == 64:
@@ -319,6 +223,74 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             query = attn.head_to_batch_dim(query).contiguous()
             key = attn.head_to_batch_dim(key).contiguous()
             value = attn.head_to_batch_dim(value).contiguous()
+            if anchors_cache and anchors_cache.is_cache_mode():
+                if self.place_in_unet not in anchors_cache.input_h_cache:
+                    anchors_cache.input_h_cache[self.place_in_unet] = {}
+
+                # Hidden states inside the mask, for uncond (index 0) and cond (index 1) prompts
+                subjects_hidden_states = torch.stack([x[self.attnstore.last_mask_dropout[width]] for x in hidden_states.chunk(2)])
+                anchors_cache.input_h_cache[self.place_in_unet][self.attnstore.curr_iter] = subjects_hidden_states
+
+            if anchors_cache and anchors_cache.is_inject_mode():
+                # We make extended key and value by concatenating the original key and value with the query.
+                anchors_hidden_states = anchors_cache.input_h_cache[self.place_in_unet][self.attnstore.curr_iter]
+
+                anchors_keys = attn.to_k(anchors_hidden_states, *args)
+                anchors_values = attn.to_v(anchors_hidden_states, *args)
+
+                extended_key = torch.cat([torch.cat([key.chunk(2, dim=0)[x], anchors_keys[x].unsqueeze(0)], dim=1) for x in range(2)])
+                extended_value = torch.cat([torch.cat([value.chunk(2, dim=0)[x], anchors_values[x].unsqueeze(0)], dim=1) for x in range(2)])
+
+                extended_key = attn.head_to_batch_dim(extended_key).contiguous()
+                extended_value = attn.head_to_batch_dim(extended_value).contiguous()
+
+                # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
+                if hidden_states.dtype == torch.float16:
+                    hidden_states = xformers.ops.memory_efficient_attention(
+                        query, extended_key, extended_value,  op=self.attention_op, scale=attn.scale
+                    )
+                else:
+                    attention_probs = attn.get_attention_scores(query, extended_key, attention_mask)
+                    hidden_states = torch.bmm(attention_probs, extended_value)
+            else:
+                # # We make extended key and value by concatenating the original key and value with the query.
+                # attention_mask_bias = self.attnstore.get_attn_mask_bias(tgt_size = width, bsz = batch_size)
+
+                # if attention_mask_bias is not None:
+                #     attention_mask_bias = torch.cat([x.unsqueeze(0).expand(attn.heads, -1, -1) for x in attention_mask_bias])
+
+                # Pre-allocate the output tensor
+                ex_out = torch.empty_like(query)
+
+                for i in range(batch_size):
+                    start_idx = i * attn.heads
+                    end_idx = start_idx + attn.heads
+
+                    attention_mask = self.attnstore.get_extended_attn_mask_instance(width, i%(batch_size//2))
+
+                    curr_q = query[start_idx:end_idx]
+
+                    if i < batch_size//2:
+                        curr_k = key[:batch_size//2]
+                        curr_v = value[:batch_size//2]
+                    else:
+                        curr_k = key[batch_size//2:]
+                        curr_v = value[batch_size//2:]
+
+                    curr_k = curr_k.flatten(0,1)[attention_mask].unsqueeze(0)
+                    curr_v = curr_v.flatten(0,1)[attention_mask].unsqueeze(0)
+
+                    curr_k = attn.head_to_batch_dim(curr_k).contiguous()
+                    curr_v = attn.head_to_batch_dim(curr_v).contiguous()
+
+                    if hidden_states.dtype == torch.float16:
+                        hidden_states = xformers.ops.memory_efficient_attention(
+                            curr_q, curr_k, curr_v, 
+                            op=self.attention_op, scale=attn.scale
+                        )
+                    else:
+                        attention_probs = attn.get_attention_scores(curr_q, curr_k, attention_mask)
+                        hidden_states = torch.bmm(attention_probs, curr_v)
 
             # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
             hidden_states = xformers.ops.memory_efficient_attention(
@@ -334,9 +306,14 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
             value = attn.head_to_batch_dim(value).contiguous()
 
             # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
-            hidden_states = xformers.ops.memory_efficient_attention(
+            if hidden_states.dtype == torch.float16:
+                hidden_states = xformers.ops.memory_efficient_attention(
                 query, key, value, op=self.attention_op, scale=attn.scale
             )
+
+            else:
+                attention_probs = attn.get_attention_scores(query, key, attention_mask)
+                hidden_states = torch.bmm(attention_probs, value)
 
         hidden_states = hidden_states.to(query.dtype)
         hidden_states = attn.batch_to_head_dim(hidden_states)
