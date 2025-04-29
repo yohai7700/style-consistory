@@ -197,17 +197,10 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
                 # if 0 <= self.attnstore.curr_iter <= 5:
                 #   query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                if 0 <= self.attnstore.curr_iter <= 20:
+                if 5 <= self.attnstore.curr_iter <= 17:
                     key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                if 0 <= self.attnstore.curr_iter <= 20:
+                if 5 <= self.attnstore.curr_iter <= 17:
                     value[i][final_mask_tgt] = 0 * value[i][final_mask_tgt]
-            
-            # print(f"subject mask {i} - {subject_mask.sum() / subject_mask.size(0)}")
-            # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-            # value[i][subject_mask] = value[reference_index][subject_mask].clone()
-            # query[i][subject_mask] = query[reference_index][subject_mask].clone()
-            # key[i][subject_mask] = key[reference_index][subject_mask].clone()
-            # value[i][subject_mask] = value[reference_index][subject_mask].clone()
 
         query = attn.head_to_batch_dim(query).contiguous()
 
@@ -281,7 +274,13 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     else:
                         attention_probs = attn.get_attention_scores(curr_q, curr_k)
                         hidden_states = torch.bmm(attention_probs, curr_v)
+                        
+                    ex_out[start_idx:end_idx] = hidden_states
+                hidden_states = ex_out
         else:
+            key = attn.head_to_batch_dim(key).contiguous()
+            value = attn.head_to_batch_dim(value).contiguous()
+            
             # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
             if hidden_states.dtype == torch.float16:
                 hidden_states = xformers.ops.memory_efficient_attention(
