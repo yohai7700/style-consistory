@@ -105,7 +105,7 @@ if __name__ == '__main__':
         json.dump(vars(args), file, indent=4)
 
     if args.run_type == "batch":
-        run_batch(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.settings, args.out_dir, args.perform_feature_injection_bg_adain)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
