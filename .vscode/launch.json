@@ -15,7 +15,7 @@
             ]
         },
         {
-            "name": "run consistory",
+            "name": "Run Consistory: Mac",
             "type": "debugpy",
             "request": "launch",
             "program": "consistory_CLI.py",
@@ -24,6 +24,20 @@
             "args": [
                 "--subject", "a cute dog",
                 "--float_type", "32",
+                "--concept_token", "dog",
+                "--settings", "sitting in the beach", "in the circus",
+                "--out_dir", "out"
+            ]
+        },
+                {
+            "name": "Run Consistory: Windows",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "consistory_CLI.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--subject", "a cute dog",
                 "--concept_token", "dog",
                 "--settings", "sitting in the beach", "in the circus",
                 "--out_dir", "out"

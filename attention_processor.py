@@ -101,9 +101,9 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         query_store: Optional[QueryStore] = None,
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
-        perform_background_adain: bool = True,
         use_styled_feature_injection: bool = False,
         use_consistory_feature_injection: bool = False,
+        use_first_half_target_heads: bool = False,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -157,14 +157,13 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         value = attn.to_v(encoder_hidden_states, *args)
         
         if (self.curr_unet_part in self.extend_kv_unet_parts) and query_store and query_store.mode == 'cache':
-            self.keys_cache = key
-            self.values_cache = value
             query_store.cache_query(query, self.place_in_unet)
         elif perform_extend_attn and query_store and query_store.mode == 'inject':
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
             
         curr_unet_part = self.place_in_unet.split('_')[0]
         if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
+            target_heads = range(attn.heads//2)
             for i in range(batch_size //2, batch_size):
                 if feature_injector is None:
                     break
@@ -174,10 +173,19 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     continue
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
+                target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
                 # if 0 <= self.attnstore.curr_iter <= 5:
                 #   query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 if 5 <= self.attnstore.curr_iter <= 17:
-                    key[i][final_mask_tgt] = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    if use_first_half_target_heads:
+                        other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                        other_key = other_key.reshape(attn.heads, other_key.size(0), other_key.size(1) // attn.heads)
+                        key = attn.head_to_batch_dim(key)
+                        key[target_indices][:, final_mask_tgt] = other_key[target_heads]
+                        key = attn.batch_to_head_dim(key)
+                    else:
+                        other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                        key[i][final_mask_tgt] = other_key
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     value[i][final_mask_tgt] = other_value
@@ -267,8 +275,6 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 query, key, value, op=self.attention_op, scale=attn.scale
             )
             else:
-                key = attn.head_to_batch_dim(key).contiguous()
-                value = attn.head_to_batch_dim(value).contiguous()
                 attention_probs = attn.get_attention_scores(query, key)
                 hidden_states = torch.bmm(attention_probs, value)
 

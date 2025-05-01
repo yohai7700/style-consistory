@@ -3,6 +3,7 @@
 # This work is licensed under the LICENSE file
 # located at the root directory.
 
+import os
 import torch
 from diffusers import DDIMScheduler
 from consistory_unet_sdxl import ConsistorySDXLUNet2DConditionModel
@@ -80,15 +81,19 @@ class GenerationResult:
 
     def save(self, out_dir):
         for i, image in enumerate(self.images):
-            image.save(f'{out_dir}/{self.name}/image_{i}.png')
-        self.image_all.save(f'{out_dir}/{self.name}/all.png')
+            dir = f'{out_dir}/{self.name}'
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+            image.save(f'{dir}/image_{i}.png')
+        self.image_all.save(f'{dir}/all.png')
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
-                        downscale_rate=4, n_achors=2, background_adain=None):
+                        downscale_rate=4, n_achors=2, background_adain=None,
+                        use_first_half_target_heads=False):
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
     float_type = story_pipeline.dtype
@@ -125,7 +130,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         extended_attn_kwargs=extended_attn_kwargs,
                         share_queries=share_queries,
                         query_store_kwargs=query_store_kwargs,
-                        num_inference_steps=n_steps)
+                        num_inference_steps=n_steps,
+                        use_first_half_target_heads=use_first_half_target_heads)
     last_masks = story_pipeline.attention_store.last_mask
 
     dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
@@ -152,6 +158,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             query_store_kwargs=query_store_kwargs,
                             feature_injector=feature_injector,
                             use_consistory_feature_injection=True,
+                            use_styled_feature_injection=False,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
@@ -171,6 +178,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             query_store_kwargs=query_store_kwargs,
                             feature_injector=feature_injector,
                             use_styled_feature_injection=True,
+                            use_first_half_target_heads=True,
+                            use_consistory_feature_injection=False,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
@@ -226,7 +235,7 @@ def run_anchor_generation(story_pipeline, prompts, concept_token,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
-    dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
+    dift_features = unet.latent_store.dift_features['201_0'][batch_size:]
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     anchor_cache_first_stage.dift_cache = dift_features
