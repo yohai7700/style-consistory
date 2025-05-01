@@ -24,6 +24,7 @@ from diffusers.models.attention_processor import Attention
 from adain import adain_style
 from consistory_utils import AnchorCache, FeatureInjector, QueryStore, xformers
 from utils.ptp_utils import AttentionStore
+import matplotlib.pyplot as plt
 
 
 class ConsistoryAttnStoreProcessor:
@@ -162,6 +163,16 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         elif perform_extend_attn and query_store and query_store.mode == 'inject':
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
             
+        attention_probs = attn.get_attention_scores(attn.head_to_batch_dim(query), attn.head_to_batch_dim(key))
+        subject_mask = self.attnstore.get_attn_mask(width, 0)
+        # if self.attnstore.curr_iter >= 0 and self.curr_unet_part == 'up' and width == 64 and subject_mask is not None:
+        #     attention_maps = torch.zeros(20, 4096)
+        #     for i in range(batch_size // 2):
+        #         subject_mask = self.attnstore.get_attn_mask(width, i)
+        #         offset_i = (i + batch_size // 2)
+        #         attention_maps[i * attn.heads:(i + 1) * attn.heads] = attention_probs[offset_i * attn.heads: (offset_i+1) * attn.heads, subject_mask].mean(dim=1)
+        #     visualize_attention_maps(attention_maps.cpu().numpy(), f"t{self.attnstore.curr_iter}_{self.place_in_unet}")
+            
         curr_unet_part = self.place_in_unet.split('_')[0]
         if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
             # target_heads = range(attn.heads//2)
@@ -175,8 +186,15 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
                 target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
-                # if 0 <= self.attnstore.curr_iter <= 5:
-                #   query[i][final_mask_tgt] = query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                # if 5 <= self.attnstore.curr_iter <= 17:
+                #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                #     if use_first_half_target_heads:
+                #         other_query = other_query.reshape(attn.heads, other_query.size(0), other_query.size(1) // attn.heads)
+                #         query = attn.head_to_batch_dim(query)
+                #         query[target_indices][:, final_mask_tgt] = other_query[target_heads]
+                #         query = attn.batch_to_head_dim(query)
+                #     else:
+                #         query[i][final_mask_tgt] = other_query
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     if use_first_half_target_heads:
@@ -344,3 +362,19 @@ def register_extended_self_attn(unet, attnstore, extended_attn_kwargs):
             attn_procs[name] = ConsistoryAttnStoreProcessor(attnstore, place_in_unet)
 
     unet.set_attn_processor(attn_procs)
+    
+    
+def visualize_attention_maps(attention_maps, title):
+    # Reshape and plot
+    fig, axes = plt.subplots(attention_maps.shape[0] // 10, 10, figsize=(15, 6))  # 1 row, 10 columns
+    fig.suptitle('Attention Maps Visualization: ' + title) # Add a title to the entire figure
+    for i, ax in enumerate(axes.flat):
+        heatmap = attention_maps[i].reshape(64, 64)
+        im = ax.imshow(heatmap, cmap='viridis')
+        ax.set_title(f'Head {i}')
+        ax.axis('off')
+
+    # Adjust layout to prevent title overlap
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.colorbar(im, ax=axes.ravel().tolist(), shrink=0.6)
+    plt.savefig(f"./attentions/{title}.png", dpi=300, bbox_inches='tight')
