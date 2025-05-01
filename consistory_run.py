@@ -130,8 +130,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         extended_attn_kwargs=extended_attn_kwargs,
                         share_queries=share_queries,
                         query_store_kwargs=query_store_kwargs,
-                        num_inference_steps=n_steps,
-                        use_first_half_target_heads=use_first_half_target_heads)
+                        num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
     dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
@@ -178,7 +177,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             query_store_kwargs=query_store_kwargs,
                             feature_injector=feature_injector,
                             use_styled_feature_injection=True,
-                            use_first_half_target_heads=True,
+                            use_first_half_target_heads=use_first_half_target_heads
                             use_consistory_feature_injection=False,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
