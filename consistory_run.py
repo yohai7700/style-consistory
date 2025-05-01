@@ -93,7 +93,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
                         downscale_rate=4, n_achors=2, background_adain=None,
-                        use_first_half_target_heads=False):
+                        use_target_heads=False):
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
     float_type = story_pipeline.dtype
@@ -167,25 +167,27 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         gc.collect()
     
     if perform_styled_injection:
-        feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
-                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
+        for i in range(20):
+            feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
+                                            swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 
-        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
-                            attention_store_kwargs=default_attention_store_kwargs,
-                            extended_attn_kwargs=extended_attn_kwargs,
-                            share_queries=share_queries,
-                            query_store_kwargs=query_store_kwargs,
-                            feature_injector=feature_injector,
-                            use_styled_feature_injection=True,
-                            use_first_half_target_heads=use_first_half_target_heads,
-                            use_consistory_feature_injection=False,
-                            num_inference_steps=n_steps)
-        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-        # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-        results.append(GenerationResult('styled_feature_injection', out.images, img_all))
+            out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                                attention_store_kwargs=default_attention_store_kwargs,
+                                extended_attn_kwargs=extended_attn_kwargs,
+                                share_queries=share_queries,
+                                query_store_kwargs=query_store_kwargs,
+                                feature_injector=feature_injector,
+                                use_styled_feature_injection=True,
+                                use_first_half_target_heads=use_target_heads,
+                                use_consistory_feature_injection=False,
+                                target_heads=[i],
+                                num_inference_steps=n_steps)
+            img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+            # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
+            results.append(GenerationResult(f'styled_feature_injection_{i}', out.images, img_all))
 
-        torch.cuda.empty_cache()
-        gc.collect()
+            torch.cuda.empty_cache()
+            gc.collect()
     return results
 
 # Anchors

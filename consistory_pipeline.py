@@ -91,8 +91,9 @@ class ConsistoryExtendAttnSDXLPipeline(
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
         use_styled_feature_injection: bool = False,
-        use_first_half_target_heads = False,
         use_consistory_feature_injection: bool = False,
+        use_first_half_target_heads = False,
+        target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
         **kwargs,
     ):
@@ -445,6 +446,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                                                 'use_consistory_feature_injection': use_consistory_feature_injection,
                                                 'use_styled_feature_injection': use_styled_feature_injection,
                                                 'use_first_half_target_heads': use_first_half_target_heads,
+                                                'target_heads': target_heads,
                                                 'feature_injector': feature_injector,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
