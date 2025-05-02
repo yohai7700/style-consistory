@@ -27,7 +27,7 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
             ]
     # concept_token=['dog']
 
-    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
+    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None, use_target_heads=True)
 
     for result in results:
         result.save(out_dir)

@@ -88,7 +88,7 @@ class GenerationResult:
         self.image_all.save(f'{dir}/all.png')
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=50, mask_dropout=0.5,
+                        seed=40, n_steps=30, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
@@ -124,29 +124,33 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     else:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': []}
 
-    print(extended_attn_kwargs['t_range'])
-    out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
-                        attention_store_kwargs=default_attention_store_kwargs,
-                        extended_attn_kwargs=extended_attn_kwargs,
-                        share_queries=share_queries,
-                        query_store_kwargs=query_store_kwargs,
-                        num_inference_steps=n_steps)
-    last_masks = story_pipeline.attention_store.last_mask
+    for i in range(10):
+        print(extended_attn_kwargs['t_range'])
+        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                            attention_store_kwargs=default_attention_store_kwargs,
+                            extended_attn_kwargs=extended_attn_kwargs,
+                            share_queries=share_queries,
+                            query_store_kwargs=query_store_kwargs,
+                            target_heads=[i],
+                            num_inference_steps=n_steps)
+        last_masks = story_pipeline.attention_store.last_mask
 
-    dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
-    dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
+        # dift_features = unet.latent_store.dift_features['501_0'][batch_size:]
+        # dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
-    nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
-    classic_image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-    results.append(GenerationResult('classic', out.images, classic_image_all))
+        # nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
+        classic_image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+        results.append(GenerationResult(f'classic_{i}', out.images, classic_image_all))
 
-    torch.cuda.empty_cache()
-    gc.collect()
+        torch.cuda.empty_cache()
+        gc.collect()
+    
+    return results
 
     # ------------------ #
     # Extended attention with nn_map #
     
-    if perform_consistory_injection:
+    if False:
         feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
                                         swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 
@@ -167,7 +171,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         gc.collect()
     
     if perform_styled_injection:
-        for i in range(20):
+        for i in [1, 0]:
             feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
                                             swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 

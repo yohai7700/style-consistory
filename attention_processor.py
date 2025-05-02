@@ -163,8 +163,8 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         elif perform_extend_attn and query_store and query_store.mode == 'inject':
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
             
-        attention_probs = attn.get_attention_scores(attn.head_to_batch_dim(query), attn.head_to_batch_dim(key))
-        subject_mask = self.attnstore.get_attn_mask(width, 0)
+        # attention_probs = attn.get_attention_scores(attn.head_to_batch_dim(query), attn.head_to_batch_dim(key))
+        # subject_mask = self.attnstore.get_attn_mask(width, 0)
         # if self.attnstore.curr_iter >= 0 and self.curr_unet_part == 'up' and width == 64 and subject_mask is not None:
         #     attention_maps = torch.zeros(20, 4096)
         #     for i in range(batch_size // 2):
@@ -173,50 +173,53 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         #         attention_maps[i * attn.heads:(i + 1) * attn.heads] = attention_probs[offset_i * attn.heads: (offset_i+1) * attn.heads, subject_mask].mean(dim=1)
         #     visualize_attention_maps(attention_maps.cpu().numpy(), f"t{self.attnstore.curr_iter}_{self.place_in_unet}")
             
-        curr_unet_part = self.place_in_unet.split('_')[0]
-        if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
-            # target_heads = range(attn.heads//2)
-            for i in range(batch_size //2, batch_size):
-                if feature_injector is None:
-                    break
+        # curr_unet_part = self.place_in_unet.split('_')[0]
+        # if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
+        #     # target_heads = range(attn.heads//2)
+        #     for i in range(batch_size//2 + 1, batch_size):
+        #         if feature_injector is None:
+        #             break
                 
-                nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
-                if nn_map is None:
-                    continue
+        #         nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
+        #         if nn_map is None:
+        #             continue
                 
-                curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
-                target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
+        #         curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
+        #         target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
+        #         if 0 <= self.attnstore.curr_iter <= 50:
+        #             # other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+        #             other_query = query[batch_size//2]
+        #             if use_first_half_target_heads:                      
+        #                 other_query = other_query.reshape(attn.heads, other_query.size(0), other_query.size(1) // attn.heads)
+        #                 query = attn.head_to_batch_dim(query)
+        #                 # query[target_indices][:, final_mask_tgt] = other_query[target_heads]
+        #                 query[target_indices] = other_query[target_heads]
+        #                 query = attn.batch_to_head_dim(query)
+        #                 ...
+        #             else:
+        #                 query[i][final_mask_tgt] = other_query
                 # if 5 <= self.attnstore.curr_iter <= 17:
-                #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                #     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 #     if use_first_half_target_heads:
-                #         other_query = other_query.reshape(attn.heads, other_query.size(0), other_query.size(1) // attn.heads)
-                #         query = attn.head_to_batch_dim(query)
-                #         query[target_indices][:, final_mask_tgt] = other_query[target_heads]
-                #         query = attn.batch_to_head_dim(query)
+                #         other_key = other_key.reshape(attn.heads, other_key.size(0), other_key.size(1) // attn.heads)
+                #         key = attn.head_to_batch_dim(key)
+                #         key[target_indices][:, final_mask_tgt] = other_key[target_heads]
+                #         key = attn.batch_to_head_dim(key)
                 #     else:
-                #         query[i][final_mask_tgt] = other_query
-                if 5 <= self.attnstore.curr_iter <= 17:
-                    other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if use_first_half_target_heads:
-                        other_key = other_key.reshape(attn.heads, other_key.size(0), other_key.size(1) // attn.heads)
-                        key = attn.head_to_batch_dim(key)
-                        key[target_indices][:, final_mask_tgt] = other_key[target_heads]
-                        key = attn.batch_to_head_dim(key)
-                    else:
-                        key[i][final_mask_tgt] = other_key
-                if 5 <= self.attnstore.curr_iter <= 17:
-                    other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if use_first_half_target_heads:
-                        other_value = other_value.reshape(attn.heads, other_value.size(0), other_value.size(1) // attn.heads)
-                        value = attn.head_to_batch_dim(key)
-                        value[target_indices][:, final_mask_tgt] = other_value[target_heads]
-                        value = attn.batch_to_head_dim(value)
-                    else:
-                        value[i][final_mask_tgt] = other_value
+                #         key[i][final_mask_tgt] = other_key
+                # if 5 <= self.attnstore.curr_iter <= 17:
+                #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                #     if use_first_half_target_heads:
+                #         other_value = other_value.reshape(attn.heads, other_value.size(0), other_value.size(1) // attn.heads)
+                #         value = attn.head_to_batch_dim(key)
+                #         value[target_indices][:, final_mask_tgt] = other_value[target_heads]
+                #         value = attn.batch_to_head_dim(value)
+                #     else:
+                #         value[i][final_mask_tgt] = other_value
 
         query = attn.head_to_batch_dim(query).contiguous()
 
-        if perform_extend_attn:
+        if False:
             # Anchor Caching
             if anchors_cache and anchors_cache.is_cache_mode():
                 if self.place_in_unet not in anchors_cache.input_h_cache:
@@ -292,6 +295,17 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         else:
             key = attn.head_to_batch_dim(key).contiguous()
             value = attn.head_to_batch_dim(value).contiguous()
+            
+            nulled_out_key = torch.zeros_like(key)
+            nulled_out_value = torch.zeros_like(value)
+            target_head = 0
+            for i in range(batch_size):
+                target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
+                nulled_out_key[target_indices] = key[target_indices]
+                nulled_out_value[target_indices] = value[target_indices]
+                
+            # key = nulled_out_key
+            value = nulled_out_value
             
             # attn_masks needs to be of shape [batch_size, query_tokens, key_tokens]
             if hidden_states.dtype == torch.float16:

@@ -229,7 +229,7 @@ class ConsistorySDXLUNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditio
     ):
         super().__init__()
 
-        self.latent_store = DIFTLatentStore(steps=[10, 201, 261], up_ft_indices=[0])
+        self.latent_store = DIFTLatentStore(steps=[10, 201, 261, 501], up_ft_indices=[0])
         self.sample_size = sample_size
 
         if num_attention_heads is not None:

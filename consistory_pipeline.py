@@ -428,6 +428,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
                                                 'perform_extend_attn': False, 
+                                                'target_heads': target_heads,
                                                 'record_attention': False},
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,
