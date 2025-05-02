@@ -10,7 +10,8 @@ import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
 import torch
 
-def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
+        
+def run_batch(gpu, float_type,n_steps, share_queries, perform_sdsa, perform_injection, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
               out_dir = None):
@@ -26,7 +27,10 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
               ]
     concept_token=['dog']
 
-    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent)
+    images, image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed,n_steps=n_steps,
+                                             share_queries=share_queries, perform_sdsa=perform_sdsa,
+                                             perform_injection=perform_injection, mask_dropout=mask_dropout,
+                                             same_latent=same_latent)
 
     if out_dir is not None:
         for i, image in enumerate(images):
@@ -78,6 +82,10 @@ if __name__ == '__main__':
     parser.add_argument('--cache_cpu_offloading', default=False, type=bool, required=False)
     
     parser.add_argument('--out_dir', default=None, type=str, required=False)
+    parser.add_argument('--share_queries', default=False, type=bool, required=False)
+    parser.add_argument('--perform_sdsa', default=False, type=bool, required=False)
+    parser.add_argument('--perform_injection', default=False, type=bool, required=False)
+    parser.add_argument('--n_steps', default=2, type=int, required=False)
 
     args = parser.parse_args()
     
@@ -99,8 +107,9 @@ if __name__ == '__main__':
     with open(metadata_path, mode="w", newline="") as file:
         json.dump(vars(args), file, indent=4)
 
+
     if args.run_type == "batch":
-        run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_batch(args.gpu, float_type,args.n_steps, args.share_queries, args.perform_sdsa, args.perform_injection, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.settings, args.out_dir)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
