@@ -552,7 +552,7 @@ class ConsistoryExtendAttnSDXLPipeline(
 def recolor_latents_4d(
     stored_latents: torch.Tensor,
     current_latents: torch.Tensor,
-    chunk_size: int = 10_000
+    chunk_size: int = 1
 ) -> torch.Tensor:
     """
     For each 4-D latent vector in current_latents, find the closest
