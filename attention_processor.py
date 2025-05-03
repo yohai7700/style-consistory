@@ -185,7 +185,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     continue
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
-                target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
+                # target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
                 # if 5 <= self.attnstore.curr_iter <= 17:
                 #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 #     if use_first_half_target_heads:
@@ -197,7 +197,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 #         query[i][final_mask_tgt] = other_query
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if use_first_half_target_heads:
+                    if False:
                         other_key = other_key.reshape(attn.heads, other_key.size(0), other_key.size(1) // attn.heads)
                         key = attn.head_to_batch_dim(key)
                         key[target_indices][:, final_mask_tgt] = other_key[target_heads]
@@ -206,7 +206,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                         key[i][final_mask_tgt] = other_key
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if use_first_half_target_heads:
+                    if False:
                         other_value = other_value.reshape(attn.heads, other_value.size(0), other_value.size(1) // attn.heads)
                         value = attn.head_to_batch_dim(key)
                         value[target_indices][:, final_mask_tgt] = other_value[target_heads]

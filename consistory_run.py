@@ -123,6 +123,10 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': [(1, n_steps)]}
     else:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': []}
+        
+    first_pass_latents = None
+    def first_pass_callback(step, t, latents):
+        first_pass_latents = latents.clone()
 
     print(extended_attn_kwargs['t_range'])
     out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
@@ -130,6 +134,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         extended_attn_kwargs=extended_attn_kwargs,
                         share_queries=share_queries,
                         query_store_kwargs=query_store_kwargs,
+                        callback=first_pass_callback,
+                        callback_steps=n_steps,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
@@ -167,27 +173,26 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         gc.collect()
     
     if perform_styled_injection:
-        for i in range(20):
-            feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
-                                            swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
+        feature_injector = FeatureInjector(nn_map, nn_distances, last_masks, inject_range_alpha=[(n_steps//10, n_steps//3,0.8)], 
+                                        swap_strategy='min', inject_unet_parts=['up', 'down'], dist_thr='dynamic', background_adain=background_adain, background_self_alignment_range=(n_steps//3 + 1, n_steps//3 + 2))
 
-            out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
-                                attention_store_kwargs=default_attention_store_kwargs,
-                                extended_attn_kwargs=extended_attn_kwargs,
-                                share_queries=share_queries,
-                                query_store_kwargs=query_store_kwargs,
-                                feature_injector=feature_injector,
-                                use_styled_feature_injection=True,
-                                use_first_half_target_heads=use_target_heads,
-                                use_consistory_feature_injection=False,
-                                target_heads=[i],
-                                num_inference_steps=n_steps)
-            img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-            # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-            results.append(GenerationResult(f'styled_feature_injection_{i}', out.images, img_all))
+        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                            attention_store_kwargs=default_attention_store_kwargs,
+                            extended_attn_kwargs=extended_attn_kwargs,
+                            share_queries=share_queries,
+                            query_store_kwargs=query_store_kwargs,
+                            feature_injector=feature_injector,
+                            use_styled_feature_injection=True,
+                            use_first_half_target_heads=use_target_heads,
+                            use_consistory_feature_injection=False,
+                            reference_style_latents=first_pass_latents,
+                            num_inference_steps=n_steps)
+        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+        # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
+        results.append(GenerationResult(f'styled_feature_injection', out.images, img_all))
 
-            torch.cuda.empty_cache()
-            gc.collect()
+        torch.cuda.empty_cache()
+        gc.collect()
     return results
 
 # Anchors
