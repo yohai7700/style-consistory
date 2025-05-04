@@ -10,10 +10,10 @@ import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
 import torch
 
-def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
+def run_batch(gpu, float_type, seed=40, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
-              out_dir = None, perform_feature_injection_bg_adain=False):
+              out_dir = None):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu, float_type)
@@ -21,9 +21,9 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
     
     prompts = [
                 f"realistic photo of {subject} on the beach", 
-                # f"B&W sketch of {subject} walking in the snow",
+                f"B&W sketch of {subject} walking in the snow",
                 # f"comic book illustration of {subject} in the forest",
-                f"a cartoon of {subject} eating pasta"
+                # f"a cartoon of {subject} eating pasta"
             ]
     # concept_token=['dog']
 
@@ -103,7 +103,7 @@ if __name__ == '__main__':
 
     if args.run_type == "batch":
         run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
-                  args.subject, args.concept_token, args.settings, args.out_dir, args.perform_feature_injection_bg_adain)
+                  args.subject, args.concept_token, args.settings, args.out_dir)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                            args.subject, args.concept_token, args.settings, args.cache_cpu_offloading, args.out_dir)

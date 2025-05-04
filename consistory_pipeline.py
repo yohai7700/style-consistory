@@ -17,6 +17,7 @@
 # are not a contribution and subject to the license under the LICENSE file located at the root directory.
 
 import torch
+import torch.nn.functional as F
 from diffusers.pipelines.stable_diffusion_xl.pipeline_output import StableDiffusionXLPipelineOutput
 from diffusers.pipelines.stable_diffusion_xl.pipeline_stable_diffusion_xl import StableDiffusionXLPipeline, \
     rescale_noise_cfg, EXAMPLE_DOC_STRING
@@ -28,10 +29,11 @@ from diffusers.utils import (
 )
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
+from tqdm import tqdm
+
 from attention_processor import register_extended_self_attn
 from consistory_utils import FeatureInjector, AnchorCache, QueryStore
 from utils.ptp_utils import AttentionStore
-import matplotlib.pyplot as plt
 
 if is_torch_xla_available():
     # import torch_xla.core.xla_model as xm
@@ -96,6 +98,8 @@ class ConsistoryExtendAttnSDXLPipeline(
         target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
         reference_style_latents: Optional[torch.FloatTensor] = None,
+        reference_images = None,
+        use_extended_attention=True,
         **kwargs,
     ):
         r"""
@@ -442,7 +446,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                         encoder_hidden_states=prompt_embeds,
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
-                                                'perform_extend_attn': True, 
+                                                'perform_extend_attn': use_extended_attention, 
                                                 'record_attention': True,
                                                 'use_consistory_feature_injection': use_consistory_feature_injection,
                                                 'use_styled_feature_injection': use_styled_feature_injection,
@@ -523,14 +527,19 @@ class ConsistoryExtendAttnSDXLPipeline(
                 self.upcast_vae()
                 latents = latents.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
                 
-            if reference_style_latents is not None:
-                latents = recolor_latents_4d(reference_style_latents, latents)
+            if False:
+              print("using reference style latents")
+              original_latents = latents.clone()
+              latents = recolor(reference_style_latents, latents)
+              x = original_latents - latents
 
             image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
-
+            if reference_images is not None:
+                image = recolor(reference_images, image)
             # cast back to fp16 if needed
             if needs_upcasting:
                 self.vae.to(dtype=torch.float16)
+            original_image = image.clone().detach()
         else:
             image = latents
 
@@ -547,12 +556,12 @@ class ConsistoryExtendAttnSDXLPipeline(
         if not return_dict:
             return (image,)
 
-        return StableDiffusionXLPipelineOutput(images=image)
+        return StableDiffusionXLPipelineOutput(images=image), original_image
     
-def recolor_latents_4d(
+def recolor_4d(
     stored_latents: torch.Tensor,
     current_latents: torch.Tensor,
-    chunk_size: int = 1
+    chunk_size: int = 1_000
 ) -> torch.Tensor:
     """
     For each 4-D latent vector in current_latents, find the closest
@@ -566,47 +575,122 @@ def recolor_latents_4d(
     Returns:
         Tensor of same shape as current_latents
     """
-    # flatten to N×4 and M×4
     B_s, _, H_s, W_s = stored_latents.shape
     B_c, _, H_c, W_c = current_latents.shape
     assert H_s == H_c and W_s == W_c, "spatial dims must match"
+    H, W = H_c, W_c
 
+    # flatten stored latents to M×4, M = B_s*H*W
     stored_vecs = (
         stored_latents
         .permute(0, 2, 3, 1)   # [B_s, H, W, 4]
-        .reshape(-1, 4)         # [M, 4], M = B_s*H*W
+        .reshape(-1, 4)         # [M, 4]
     )
-    current_vecs = (
-        current_latents
-        .permute(0, 2, 3, 1)   # [B_c, H, W, 4]
-        .reshape(-1, 4)         # [N, 4], N = B_c*H*W
-    )
-
     M = stored_vecs.shape[0]
-    N = current_vecs.shape[0]
-    recolored = torch.empty_like(current_vecs)
 
-    # process in chunks along N to limit memory
-    for start in range(0, N, chunk_size):
-        end = min(start + chunk_size, N)
-        chunk = current_vecs[start:end]              # [C,4]
+    out = torch.empty_like(current_latents)
+    # Process each item in the current_latents batch separately
+    for i in range(B_c):
+        
+        current_latents_batch_item = current_latents[i]
+        stored_latents_batch_item = stored_latents[i]
 
-        # compute squared distances to all M stored vectors
-        #   (chunk[:,None,:] - stored_vecs[None,:,:]) → [C, M, 4]
-        #   then sum over dim=2 → [C, M]
-        d2 = torch.sum(
-            (chunk.unsqueeze(1) - stored_vecs.unsqueeze(0)) ** 2,
-            dim=2
-        )  # [C, M]
+        # flatten current batch item to N_b×4, N_b = 1*H*W
+        current_vecs_b = (
+            current_latents_batch_item
+            .permute(1, 2, 0)   # [1, H, W, 4]
+            .reshape(-1, 4)         # [N_b, 4]
+        )
+        stored_latents_batch_item = stored_latents_batch_item.permute(1, 2, 0).reshape(-1, 4)
+        N_b = current_vecs_b.shape[0]
+        recolored_b = torch.empty_like(current_vecs_b)
 
-        # find nearest stored index for each chunk vector
-        idx = torch.argmin(d2, dim=1)               # [C]
-        recolored[start:end] = stored_vecs[idx]     # [C,4]
+        # process in chunks along N_b to limit memory
+        for start in tqdm(range(0, N_b, chunk_size)):
+            end = min(start + chunk_size, N_b)
+            chunk = current_vecs_b[start:end]              # [C, 4]
 
-    # reshape back to [B_c, 4, H, W]
-    out = (
-        recolored
-        .reshape(B_c, H_c, W_c, 4)  # [B_c, H, W, 4]
-        .permute(0, 3, 1, 2)        # [B_c, 4, H, W]
-    )
+            d2 = torch.sum(
+                (chunk.unsqueeze(1) - stored_latents_batch_item.unsqueeze(0)) ** 2,
+                dim=2
+            )  # [C, M]
+            
+            # find nearest stored index for each chunk vector
+            idx = torch.argmin(d2, dim=1)               # [C]
+            recolored_b[start:end] = stored_latents_batch_item[idx]     # [C, 4]
+
+        # reshape back to [1, 4, H, W] for this batch item
+        out_b = (
+            recolored_b
+            .reshape(H, W, 4)  # [1, H, W, 4]
+            .permute(2, 0, 1)    # [1, 4, H, W]
+        )
+        out[i] = out_b
+    return out
+
+def recolor(
+    style_references: torch.Tensor,
+    values: torch.Tensor,
+    chunk_size: int = 10_000
+) -> torch.Tensor:
+    """
+    For each 4-D latent vector in current_latents, find the closest
+    4-D vector in stored_latents and replace it.
+
+    Args:
+        stored_latents: Tensor[B_s, 4, H, W]
+        current_latents: Tensor[B_c, 4, H, W]
+        chunk_size: number of current vectors to process at once
+
+    Returns:
+        Tensor of same shape as current_latents
+    """
+    B, C, H, W = values.shape
+
+    out = values.clone()
+    # Process each item in the current_latents batch separately
+    for i in range(B):
+        
+        value = values[i]
+        style_reference = style_references[i]
+        
+        style_reference =  F.interpolate(
+            style_reference.unsqueeze(0),
+            size=(64, 64),
+            mode='bilinear',
+            align_corners=False,
+            antialias=True
+        ).squeeze(0)
+
+        # flatten current batch item to N_b×4, N_b = 1*H*W
+        flattened_values = (
+            value
+            .permute(1, 2, 0)
+            .reshape(-1, C)
+        )
+        style_reference = style_reference.permute(1, 2, 0).reshape(-1, C)
+        N_b = flattened_values.shape[0]
+        recolored = torch.empty_like(flattened_values)
+
+        # process in chunks along N_b to limit memory
+        for start in tqdm(range(0, N_b, chunk_size)):
+            end = min(start + chunk_size, N_b)
+            chunk = flattened_values[start:end]              # [C, 4]
+
+            d2 = torch.sum(
+                (chunk.unsqueeze(1) - style_reference.unsqueeze(0)) ** 2,
+                dim=2
+            )  # [C, M]
+            
+            # find nearest stored index for each chunk vector
+            idx = torch.argmin(d2, dim=1)               # [C]
+            recolored[start:end] = style_reference[idx]     # [C, 4]
+
+        # reshape back to [1, 4, H, W] for this batch item
+        out_b = (
+            recolored
+            .reshape(H, W, C)  # [1, H, W, 4]
+            .permute(2, 0, 1)    # [1, 4, H, W]
+        )
+        out[i] = out_b
     return out
