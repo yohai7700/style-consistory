@@ -186,33 +186,15 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
                 # target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
-                # if 5 <= self.attnstore.curr_iter <= 17:
-                #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                #     if use_first_half_target_heads:
-                #         other_query = other_query.reshape(attn.heads, other_query.size(0), other_query.size(1) // attn.heads)
-                #         query = attn.head_to_batch_dim(query)
-                #         query[target_indices][:, final_mask_tgt] = other_query[target_heads]
-                #         query = attn.batch_to_head_dim(query)
-                #     else:
-                #         query[i][final_mask_tgt] = other_query
+                if 5 <= self.attnstore.curr_iter <= 17:
+                    other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    query[i][final_mask_tgt] *= 0
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if False:
-                        other_key = other_key.reshape(attn.heads, other_key.size(0), other_key.size(1) // attn.heads)
-                        key = attn.head_to_batch_dim(key)
-                        key[target_indices][:, final_mask_tgt] = other_key[target_heads]
-                        key = attn.batch_to_head_dim(key)
-                    else:
-                        key[i][final_mask_tgt] = other_key
+                    key[i][final_mask_tgt] = other_key
                 if 5 <= self.attnstore.curr_iter <= 17:
                     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    if False:
-                        other_value = other_value.reshape(attn.heads, other_value.size(0), other_value.size(1) // attn.heads)
-                        value = attn.head_to_batch_dim(key)
-                        value[target_indices][:, final_mask_tgt] = other_value[target_heads]
-                        value = attn.batch_to_head_dim(value)
-                    else:
-                        value[i][final_mask_tgt] = other_value
+                    value[i][final_mask_tgt] *= 0
 
         query = attn.head_to_batch_dim(query).contiguous()
 
