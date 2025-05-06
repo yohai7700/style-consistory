@@ -186,13 +186,13 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
                 # target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
-                if 5 <= self.attnstore.curr_iter <= 17:
-                    other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    query[i][final_mask_tgt] *= 0
-                if 5 <= self.attnstore.curr_iter <= 17:
+                # if 5 <= self.attnstore.curr_iter <= 17:
+                #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                #     query[i][final_mask_tgt] *= 0
+                if 0 <= self.attnstore.curr_iter <= 15:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     key[i][final_mask_tgt] = other_key
-                if 5 <= self.attnstore.curr_iter <= 17:
+                if 0 <= self.attnstore.curr_iter <= 15:
                     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     value[i][final_mask_tgt] *= 0
 
