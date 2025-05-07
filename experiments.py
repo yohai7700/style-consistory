@@ -196,6 +196,11 @@ style_groups = [
         "lineart",
         "photorealistic"
     ]),
+    StyleGroup(styles=[
+        "pixel art",
+        "watercolor painting",
+        "photorealistic"
+    ]),
 ]
 
 def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5, same_latent=False, **kwargs):
