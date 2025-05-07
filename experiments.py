@@ -256,6 +256,7 @@ def make_experiment_grid_image(
     figsize=(8, 8),
     save_path: str | None = None
 ):
+    plt.ioff()
     N = len(results)
     M = len(results[0].images)
     fig, axes = plt.subplots(N, M, figsize=figsize, squeeze=False)
