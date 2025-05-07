@@ -10,6 +10,8 @@ import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
 import torch
 
+from experiments import make_experiment_grid_image
+
 def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
@@ -25,12 +27,13 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
                 # f"comic book illustration of {subject} in the forest",
                 f"a cartoon of {subject} eating pasta"
             ]
-    # concept_token=['dog']
+    concept_token=['dog']
 
     results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
 
     for result in results:
         result.save(out_dir)
+    make_experiment_grid_image(results, prompts, save_path=f"{out_dir}/results-grid.png")
 
     return results
 

@@ -4,8 +4,8 @@ import json
 import pathlib
 from typing import List
 
-import torch
-from consistory_run import run_batch_generation
+import matplotlib.pyplot as plt
+from consistory_run import run_batch_generation, GenerationResult
 
 @dataclass
 class PromptGroup:
@@ -224,6 +224,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         "concept_tokens": prompt_group.concept_tokens,
         "styles": style_group.styles
     })
+    make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
     return results
 
 def get_colab_folder(seed, prompt_group_index, style_group_index):
@@ -238,6 +239,35 @@ def get_colab_folder(seed, prompt_group_index, style_group_index):
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     out_dir = f"{target}/{ts}_seed{seed}_prompts{prompt_group_index}_styles{style_group_index}"
     return out_dir
+
+def make_experiment_grid_image(
+    results: List[GenerationResult],
+    prompts: List[str],
+    figsize=(8, 8),
+    save_path: str | None = None
+):
+    N = len(results)
+    M = len(results[0].images)
+    fig, axes = plt.subplots(N, M, figsize=figsize, squeeze=False)
+    for r in range(N):
+        images = results[r].images
+        for c in range(M):
+            axes[r][c].imshow(images[c])
+            axes[r][c].set_xticks([])
+            axes[r][c].set_yticks([])
+            axes[r][c].set_frame_on(False)
+            if r == 0:
+                axes[0][c].set_title(prompts[c], fontsize=10, pad=4)
+        axes[r][0].set_ylabel(results[r].name, 
+                              rotation=0, 
+                              fontsize=10,
+                              ha="right",
+                              va="center",
+                              labelpad=10)
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, bbox_inches="tight")
+    return fig
 
 def write_metadata(metadata_path: str, content):
     with open(metadata_path, mode="w", newline="") as file:
