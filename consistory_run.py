@@ -146,7 +146,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
     classic_image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-    results.append(GenerationResult('classic', out.images, classic_image_all))
+    results.append(GenerationResult('first pass', out.images, classic_image_all))
 
     torch.cuda.empty_cache()
     gc.collect()
