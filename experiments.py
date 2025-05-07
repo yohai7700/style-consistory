@@ -193,7 +193,7 @@ style_groups = [
     ]),
 ]
 
-def run_batch_experiment(prompt_group_index, style_group_index, seed=100, mask_dropout=0.5, same_latent=False, **kwargs):
+def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5, same_latent=False, **kwargs):
     prompt_group = prompt_groups[prompt_group_index]
     style_group = style_groups[style_group_index]
     
@@ -202,7 +202,9 @@ def run_batch_experiment(prompt_group_index, style_group_index, seed=100, mask_d
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
     
-    results = run_batch_generation(prompts, concept_token=prompt_group.concept_tokens, 
+    results = run_batch_generation(pipeline,
+                                   prompts=prompts, 
+                                   concept_token=prompt_group.concept_tokens, 
                                    seed=seed,
                                    mask_dropout=mask_dropout,
                                    **kwargs)
