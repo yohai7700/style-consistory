@@ -212,6 +212,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
     for result in results:
         result.save(colab_folder)
+        print(f"Saved {result} to {colab_folder}")
         
     write_metadata(f"{colab_folder}/metadata.json", {
         "prompt_group_index": prompt_group_index,
@@ -241,5 +242,3 @@ def get_colab_folder(seed, prompt_group_index, style_group_index):
 def write_metadata(metadata_path: str, content):
     with open(metadata_path, mode="w", newline="") as file:
         json.dump(content, file, indent=4)
-
-print([group.prompts for group in prompt_groups])
