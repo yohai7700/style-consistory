@@ -11,6 +11,7 @@ from consistory_pipeline import ConsistoryExtendAttnSDXLPipeline
 from consistory_utils import FeatureInjector, AnchorCache
 from utils.general_utils import *
 import gc
+import numpy as np
 
 from utils.ptp_utils import view_images
 
@@ -80,12 +81,13 @@ class GenerationResult:
         self.name = name
 
     def save(self, out_dir):
+        dir = f'{out_dir}/{self.name}'
+        if not os.path.exists(dir):
+            os.makedirs(dir)
         for i, image in enumerate(self.images):
-            dir = f'{out_dir}/{self.name}'
-            if not os.path.exists(dir):
-                os.makedirs(dir)
             image.save(f'{dir}/image_{i}.png')
         self.image_all.save(f'{dir}/all.png')
+        
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
