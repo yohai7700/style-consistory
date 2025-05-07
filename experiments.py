@@ -20,29 +20,29 @@ class StyleGroup:
         
 prompt_groups = [
     PromptGroup(
-        concept_tokens=["boy"],
+        concept_tokens=["kid"],
         prompt_templates=[
-            "{0} in the forest",
-            "{0} swimming",
-            "{0} playing soccer",
+            "{0} wearing a school uniform",
+            "{0} walking with his mom",
+            "{0} reading a book",
         ],
-        subjects=["a boy"]
+        subjects=["a kid"]
     ),
     PromptGroup(
         concept_tokens=["girl"],
         prompt_templates=[
-            "{0} in the park",
-            "{0} painting a picture",
-            "{0} running on a trail",
+            "{0} wearing headphones",
+            "{0} having a picnic",
+            "{0} in the snow",
         ],
-        subjects=["a girl"]
+        subjects=["a happy girl"]
     ),
     PromptGroup(
         concept_tokens=["man"],
         prompt_templates=[
-            "{0} with a hat in the desert",
-            "{0} with a mustache taking a picture with his phone",
-            "{0} with a wandering in the Eiffel Tower",
+            "{0} wearing a hat",
+            "{0} taking a selfie",
+            "{0} in Paris",
         ],
         subjects=["a man"]
     ),
@@ -141,7 +141,7 @@ prompt_groups = [
         prompt_templates=[
             "{0} parked at the beach",
             "{0} in a city street",
-            "{0} going through a tunnel",
+            "{0} getting towed",
         ],
         subjects=["a car"]
     ),
@@ -208,7 +208,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     style_group = style_groups[style_group_index]
     
     prompts = [
-        f"{prompt}, {style}"
+        f"{prompt}, {style}, front view, subject facing camera"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
     
