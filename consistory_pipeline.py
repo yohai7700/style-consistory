@@ -83,7 +83,6 @@ class ConsistoryExtendAttnSDXLPipeline(
         clip_skip: Optional[int] = None,
         callback_on_step_end: Optional[Callable[[int, int, Dict], None]] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
-        
         attention_store_kwargs: Optional[Dict] = None,
         extended_attn_kwargs: Optional[Dict] = None,
         share_queries: bool = False,
@@ -92,10 +91,10 @@ class ConsistoryExtendAttnSDXLPipeline(
         anchors_cache: Optional[AnchorCache] = None,
         use_styled_feature_injection: bool = False,
         use_consistory_feature_injection: bool = False,
+        perform_extend_attn=True,
         use_first_half_target_heads = False,
         target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
-        reference_style_latents: Optional[torch.FloatTensor] = None,
         **kwargs,
     ):
         r"""
@@ -442,7 +441,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                         encoder_hidden_states=prompt_embeds,
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
-                                                'perform_extend_attn': True, 
+                                                'perform_extend_attn': perform_extend_attn, 
                                                 'record_attention': True,
                                                 'use_consistory_feature_injection': use_consistory_feature_injection,
                                                 'use_styled_feature_injection': use_styled_feature_injection,
@@ -522,9 +521,6 @@ class ConsistoryExtendAttnSDXLPipeline(
             if needs_upcasting:
                 self.upcast_vae()
                 latents = latents.to(next(iter(self.vae.post_quant_conv.parameters())).dtype)
-                
-            if reference_style_latents is not None:
-                latents = recolor_latents_4d(reference_style_latents, latents)
 
             image = self.vae.decode(latents / self.vae.config.scaling_factor, return_dict=False)[0]
 

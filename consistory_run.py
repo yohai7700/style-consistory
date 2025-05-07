@@ -94,7 +94,9 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
-                        downscale_rate=4, n_achors=2, background_adain=None,
+                        downscale_rate=4, n_achors=2, 
+                        background_adain=None,
+                        perform_original_sdxl=False,
                         use_target_heads=False):
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
@@ -125,18 +127,25 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': [(1, n_steps)]}
     else:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': []}
-        
-    first_pass_latents = None
-    def first_pass_callback(step, t, latents):
-        first_pass_latents = latents.clone()
 
+    if perform_original_sdxl:
+        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                            attention_store_kwargs=default_attention_store_kwargs,
+                            extended_attn_kwargs=extended_attn_kwargs,
+                            share_queries=share_queries,
+                            query_store_kwargs=query_store_kwargs,
+                            callback_steps=n_steps,
+                            perform_extend_attn=False,
+                            num_inference_steps=n_steps)
+        image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+        results.append(GenerationResult('original sdxl', out.images, image_all))
+    
     print(extended_attn_kwargs['t_range'])
     out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                         attention_store_kwargs=default_attention_store_kwargs,
                         extended_attn_kwargs=extended_attn_kwargs,
                         share_queries=share_queries,
                         query_store_kwargs=query_store_kwargs,
-                        callback=first_pass_callback,
                         callback_steps=n_steps,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
@@ -145,8 +154,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
-    classic_image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-    results.append(GenerationResult('first pass', out.images, classic_image_all))
+    image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
+    results.append(GenerationResult('first pass', out.images, image_all))
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -187,7 +196,6 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             use_styled_feature_injection=True,
                             use_first_half_target_heads=use_target_heads,
                             use_consistory_feature_injection=False,
-                            reference_style_latents=first_pass_latents,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
