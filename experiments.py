@@ -40,9 +40,9 @@ prompt_groups = [
     PromptGroup(
         concept_tokens=["man"],
         prompt_templates=[
-            "portrait of {0} with a hat in the desert",
-            "portrait of {0} with a mustache taking a picture with his phone",
-            "portrait of {0} with a wandering in the Eiffel Tower",
+            "{0} with a hat in the desert",
+            "{0} with a mustache taking a picture with his phone",
+            "{0} with a wandering in the Eiffel Tower",
         ],
         subjects=["a man"]
     ),

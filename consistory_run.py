@@ -169,7 +169,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-        results.append(GenerationResult('consistory_feature_injection', out.images, img_all))
+        results.append(GenerationResult('consistory', out.images, img_all))
 
         torch.cuda.empty_cache()
         gc.collect()
@@ -191,7 +191,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             num_inference_steps=n_steps)
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-        results.append(GenerationResult(f'styled_feature_injection', out.images, img_all))
+        results.append(GenerationResult(f'consistyle', out.images, img_all))
 
         torch.cuda.empty_cache()
         gc.collect()
