@@ -40,9 +40,9 @@ prompt_groups = [
     PromptGroup(
         concept_tokens=["man"],
         prompt_templates=[
-            "{0} fishing",
-            "{0} hiking in the mountains",
-            "{0} cooking in the kitchen",
+            "portrait of {0} with a hat in the desert",
+            "portrait of {0} with a mustache taking a picture with his phone",
+            "portrait of {0} with a wandering in the Eiffel Tower",
         ],
         subjects=["a man"]
     ),
@@ -190,6 +190,11 @@ style_groups = [
         "Minecraft style",
         "hyper-realistic photo",
         "claymation"
+    ]),
+    StyleGroup(styles=[
+        "oil painting",
+        "lineart",
+        "photorealistic"
     ]),
 ]
 
