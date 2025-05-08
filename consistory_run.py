@@ -14,7 +14,7 @@ import gc
 import numpy as np
 from PIL import Image
 
-from utils.ptp_utils import view_images
+from utils.ptp_utils import AttentionStore, view_images
 
 LATENT_RESOLUTIONS = [32, 64]
 
@@ -91,7 +91,7 @@ class GenerationResult:
         
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=50, mask_dropout=0.5,
+                        seed=40, n_steps=1, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
@@ -129,6 +129,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     else:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': []}
 
+    attnstore = AttentionStore(default_attention_store_kwargs)
     if perform_original_sdxl:
         out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                             attention_store_kwargs=default_attention_store_kwargs,
@@ -138,6 +139,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             callback_steps=n_steps,
                             perform_extend_attn=False,
                             record_values=True,
+                            attnstore=attnstore,
                             num_inference_steps=n_steps)
         results.append(GenerationResult('original sdxl', out.images, downscale_rate=downscale_rate))
     
@@ -151,7 +153,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
-    dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
+    dift_features = unet.latent_store.dift_features['1_0'][batch_size:]
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
@@ -198,6 +200,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             use_styled_feature_injection=True,
                             use_first_half_target_heads=use_target_heads,
                             use_consistory_feature_injection=False,
+                            attnstore=attnstore,
                             num_inference_steps=n_steps)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
         results.append(GenerationResult(f'consistyle', out.images, downscale_rate=downscale_rate))

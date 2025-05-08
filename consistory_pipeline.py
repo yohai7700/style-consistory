@@ -96,6 +96,7 @@ class ConsistoryExtendAttnSDXLPipeline(
         target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
         record_values = False,
+        attnstore: AttentionStore = None,
         **kwargs,
     ):
         r"""
@@ -335,7 +336,10 @@ class ConsistoryExtendAttnSDXLPipeline(
         else:
             query_store = None
 
-        self.attention_store = AttentionStore(attention_store_kwargs)
+        if attnstore is not None:
+            self.attention_store = AttentionStore(attention_store_kwargs)
+        else:
+            self.attention_store = attnstore
         register_extended_self_attn(self.unet, self.attention_store, extended_attn_kwargs)
 
         # 7. Prepare added time ids & embeddings
