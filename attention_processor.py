@@ -175,7 +175,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
             
         curr_unet_part = self.place_in_unet.split('_')[0]
-        if record_values and curr_unet_part == 'up' and width == 64:
+        if record_values and curr_unet_part == 'up' and width == 64 and 5 <= self.attnstore.curr_iter <= 15:
             self.attnstore.record_value(self.place_in_unet, value)
         
         if use_styled_feature_injection and feature_injector is None and curr_unet_part == 'up' and width == 64:
