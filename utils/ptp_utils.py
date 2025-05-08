@@ -138,7 +138,7 @@ class AttentionStore:
             self.step_store[place_in_unet].append(batched_guidance_attention)
             
     def record_value(self, place_in_unet, value):
-        self.values[f"{place_in_unet}_{self.curr_iter}"] = value
+        self.values[f"{place_in_unet}_{self.curr_iter}"] = value.clone().detach().cpu()
     
     def get_value(self, place_in_unet):
         return self.values.get(f"{place_in_unet}_{self.curr_iter}")
