@@ -178,13 +178,15 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         if record_values and curr_unet_part == 'up' and width == 64 and 5 <= self.attnstore.curr_iter <= 15:
             self.attnstore.record_value(self.place_in_unet, value)
         
-        if use_styled_feature_injection and feature_injector is None and curr_unet_part == 'up' and width == 64:
+        if use_styled_feature_injection and feature_injector is not None and curr_unet_part == 'up' and width == 64:
             for i in range(batch_size //2, batch_size):
                 nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
                 if 5 <= self.attnstore.curr_iter <= 15:
+                    other_query = query[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    query[i][final_mask_tgt] = other_query
                     key[i][final_mask_tgt] = other_key
                     value = self.attnstore.get_value(self.place_in_unet).to(value.device)
                 # if 5 <= self.attnstore.curr_iter <= 15:
@@ -250,6 +252,15 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                         curr_v = value[batch_size//2:]
 
                     curr_k = curr_k.flatten(0,1)[attention_mask].unsqueeze(0)
+                    if use_styled_feature_injection:
+                        # batched_attention_mask = attention_mask.reshape(batch_size//2, -1)
+                        # for j in range(batch_size//2):
+                        #     if i == j:
+                        #         continue
+                        #     masked_value_j = value[j][batched_attention_mask[j]]
+                        #     reference_value = curr_v[i % (batch_size//2)]
+                        #     curr_v[j] = recolor(masked_value_j, reference_value)
+                        curr_v = adain_style(curr_v, curr_v[i % (batch_size//2)])
                     curr_v = curr_v.flatten(0,1)[attention_mask].unsqueeze(0)
 
                     curr_k = attn.head_to_batch_dim(curr_k).contiguous()
@@ -355,3 +366,32 @@ def visualize_attention_maps(attention_maps, title):
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.colorbar(im, ax=axes.ravel().tolist(), shrink=0.6)
     plt.savefig(f"./attentions/{title}.png", dpi=300, bbox_inches='tight')
+
+def recolor(
+    value: torch.Tensor,
+    reference: torch.Tensor,
+    chunk_size: int = 1_000
+) -> torch.Tensor:
+    flattened_source = reference.reshape(-1, 4)
+    flattened_value = value.reshape(-1, 4)
+
+    N = flattened_value.shape[0]
+    recolored = torch.empty_like(flattened_value)
+
+    # process in chunks along N to limit memory
+    for start in range(0, N, chunk_size):
+        end = min(start + chunk_size, N)
+        chunk = flattened_value[start:end]
+
+        d2 = torch.sum(
+            (chunk.unsqueeze(1) - flattened_source.unsqueeze(0)) ** 2,
+            dim=2
+        )  # [C, M]
+
+        idx = torch.argmin(d2, dim=1)
+        recolored[start:end] = flattened_source[idx]
+
+    # reshape back to [B_c, 4, H, W]
+    out = recolored.reshape(value.shape)
+    
+    return out

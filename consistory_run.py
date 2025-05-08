@@ -207,6 +207,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         
         dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
         results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
+        
+        del attnstore
         torch.cuda.empty_cache()
         gc.collect()
         
