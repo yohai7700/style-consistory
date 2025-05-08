@@ -336,7 +336,7 @@ class ConsistoryExtendAttnSDXLPipeline(
         else:
             query_store = None
 
-        if attnstore is not None:
+        if attnstore is None:
             self.attention_store = AttentionStore(attention_store_kwargs)
         else:
             self.attention_store = attnstore
