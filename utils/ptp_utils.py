@@ -80,11 +80,18 @@ def view_images(images: Union[np.ndarray, List],
     images = [image.astype(np.uint8) for image in images] + [empty_images] * num_empty
     num_items = len(images)
 
-    h, w, c = images[0].shape
+    if images[0].ndim == 2:
+        h, w = images[0].shape
+    elif images[0].ndim == 3:
+        h, w, c = images[0].shape
     offset = int(h * offset_ratio)
     num_cols = num_items // num_rows
-    image_ = np.ones((h * num_rows + offset * (num_rows - 1),
-                      w * num_cols + offset * (num_cols - 1), 3), dtype=np.uint8) * 255
+    if images[0].ndim == 2:
+        image_ = np.ones((h * num_rows + offset * (num_rows - 1),
+                        w * num_cols + offset * (num_cols - 1)), dtype=np.uint8) * 255
+    if images[0].ndim == 3:
+        image_ = np.ones((h * num_rows + offset * (num_rows - 1),
+                        w * num_cols + offset * (num_cols - 1), 3), dtype=np.uint8) * 255
     for i in range(num_rows):
         for j in range(num_cols):
             image_[i * (h + offset): i * (h + offset) + h:, j * (w + offset): j * (w + offset) + w] = images[
@@ -121,6 +128,7 @@ class AttentionStore:
         self.attn_masks = {res: None for res in self.ALL_RES}
         self.last_mask = {res: None for res in self.ALL_RES}
         self.last_mask_dropout = {res: None for res in self.ALL_RES}
+        self.values = {}
 
     def __call__(self, attn, is_cross: bool, place_in_unet: str, attn_heads: int):
         if is_cross and attn.shape[1] == np.prod(self.attn_res):
@@ -128,6 +136,12 @@ class AttentionStore:
             batched_guidance_attention = guidance_attention.reshape([guidance_attention.shape[0]//attn_heads, attn_heads, *guidance_attention.shape[1:]])
             batched_guidance_attention = batched_guidance_attention.mean(dim=1)
             self.step_store[place_in_unet].append(batched_guidance_attention)
+            
+    def record_value(self, place_in_unet, value):
+        self.values[f"{place_in_unet}_{self.curr_iter}"] = value.clone().detach().cpu()
+    
+    def get_value(self, place_in_unet):
+        return self.values.get(f"{place_in_unet}_{self.curr_iter}")
 
     def reset(self):
         self.step_store = defaultdict(list)

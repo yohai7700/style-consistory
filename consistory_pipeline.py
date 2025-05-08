@@ -83,15 +83,20 @@ class ConsistoryExtendAttnSDXLPipeline(
         clip_skip: Optional[int] = None,
         callback_on_step_end: Optional[Callable[[int, int, Dict], None]] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
-        
         attention_store_kwargs: Optional[Dict] = None,
         extended_attn_kwargs: Optional[Dict] = None,
         share_queries: bool = False,
         query_store_kwargs: Optional[Dict] = {},
         feature_injector: Optional[FeatureInjector] = None,
         anchors_cache: Optional[AnchorCache] = None,
-
+        use_styled_feature_injection: bool = False,
+        use_consistory_feature_injection: bool = False,
+        perform_extend_attn=True,
+        use_first_half_target_heads = False,
+        target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
+        record_values = False,
+        attnstore: AttentionStore = None,
         **kwargs,
     ):
         r"""
@@ -331,7 +336,10 @@ class ConsistoryExtendAttnSDXLPipeline(
         else:
             query_store = None
 
-        self.attention_store = AttentionStore(attention_store_kwargs)
+        if attnstore is None:
+            self.attention_store = AttentionStore(attention_store_kwargs)
+        else:
+            self.attention_store = attnstore
         register_extended_self_attn(self.unet, self.attention_store, extended_attn_kwargs)
 
         # 7. Prepare added time ids & embeddings
@@ -438,9 +446,14 @@ class ConsistoryExtendAttnSDXLPipeline(
                         encoder_hidden_states=prompt_embeds,
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
-                                                'perform_extend_attn': True, 
-                                                'record_attention': True, 
+                                                'perform_extend_attn': perform_extend_attn, 
+                                                'record_attention': True,
+                                                'use_consistory_feature_injection': use_consistory_feature_injection,
+                                                'use_styled_feature_injection': use_styled_feature_injection,
+                                                'use_first_half_target_heads': use_first_half_target_heads,
+                                                'target_heads': target_heads,
                                                 'feature_injector': feature_injector,
+                                                'record_values': record_values,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,
@@ -537,3 +550,65 @@ class ConsistoryExtendAttnSDXLPipeline(
             return (image,)
 
         return StableDiffusionXLPipelineOutput(images=image)
+    
+def recolor_latents_4d(
+    stored_latents: torch.Tensor,
+    current_latents: torch.Tensor,
+    chunk_size: int = 1
+) -> torch.Tensor:
+    """
+    For each 4-D latent vector in current_latents, find the closest
+    4-D vector in stored_latents and replace it.
+
+    Args:
+        stored_latents: Tensor[B_s, 4, H, W]
+        current_latents: Tensor[B_c, 4, H, W]
+        chunk_size: number of current vectors to process at once
+
+    Returns:
+        Tensor of same shape as current_latents
+    """
+    # flatten to N×4 and M×4
+    B_s, _, H_s, W_s = stored_latents.shape
+    B_c, _, H_c, W_c = current_latents.shape
+    assert H_s == H_c and W_s == W_c, "spatial dims must match"
+
+    stored_vecs = (
+        stored_latents
+        .permute(0, 2, 3, 1)   # [B_s, H, W, 4]
+        .reshape(-1, 4)         # [M, 4], M = B_s*H*W
+    )
+    current_vecs = (
+        current_latents
+        .permute(0, 2, 3, 1)   # [B_c, H, W, 4]
+        .reshape(-1, 4)         # [N, 4], N = B_c*H*W
+    )
+
+    M = stored_vecs.shape[0]
+    N = current_vecs.shape[0]
+    recolored = torch.empty_like(current_vecs)
+
+    # process in chunks along N to limit memory
+    for start in range(0, N, chunk_size):
+        end = min(start + chunk_size, N)
+        chunk = current_vecs[start:end]              # [C,4]
+
+        # compute squared distances to all M stored vectors
+        #   (chunk[:,None,:] - stored_vecs[None,:,:]) → [C, M, 4]
+        #   then sum over dim=2 → [C, M]
+        d2 = torch.sum(
+            (chunk.unsqueeze(1) - stored_vecs.unsqueeze(0)) ** 2,
+            dim=2
+        )  # [C, M]
+
+        # find nearest stored index for each chunk vector
+        idx = torch.argmin(d2, dim=1)               # [C]
+        recolored[start:end] = stored_vecs[idx]     # [C,4]
+
+    # reshape back to [B_c, 4, H, W]
+    out = (
+        recolored
+        .reshape(B_c, H_c, W_c, 4)  # [B_c, H, W, 4]
+        .permute(0, 3, 1, 2)        # [B_c, 4, H, W]
+    )
+    return out

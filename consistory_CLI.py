@@ -10,13 +10,15 @@ import argparse
 from consistory_run import load_pipeline, run_batch_generation, run_anchor_generation, run_extra_generation
 import torch
 
-def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
-              style="A photo of ", subject="dog", concept_token=['dog'],
+from experiments import make_experiment_grid_image
+
+def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
+              style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
               out_dir = None, perform_feature_injection_bg_adain=False):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
-    story_pipeline = load_pipeline(gpu)
+    story_pipeline = load_pipeline(gpu, float_type)
     # prompts = [f'{style}{subject} {setting}' for setting in settings]
     
     prompts = [
@@ -25,24 +27,22 @@ def run_batch(gpu, seed=100, mask_dropout=0.5, same_latent=False,
                 # f"comic book illustration of {subject} in the forest",
                 f"a cartoon of {subject} eating pasta"
             ]
-    # concept_token=['dog']
+    concept_token=['dog']
 
-    images, image_all, first_image_all = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
+    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
 
-    if out_dir is not None:
-        for i, image in enumerate(images):
-            image.save(f'{out_dir}/image_{i}.png')
-    image_all.save(f'{out_dir}/image_all.png')    
-    first_image_all.save(f'{out_dir}/first_image_all.png')    
+    for result in results:
+        result.save(out_dir)
+    make_experiment_grid_image(results, prompts, save_path=f"{out_dir}/results-grid.png")
 
-    return images, image_all
+    return results
 
-def run_cached_anchors(gpu, seed=40, mask_dropout=0.5, same_latent=False,
+def run_cached_anchors(gpu, float_type, seed=40, mask_dropout=0.5, same_latent=False,
                 style="A photo of ", subject="a cute dog", concept_token=['dog'],
                 settings=["sitting in the beach", "standing in the snow"],
                 cache_cpu_offloading=False, out_dir = None):
     
-    story_pipeline = load_pipeline(gpu)
+    story_pipeline = load_pipeline(gpu, float_type)
     prompts = [f'{style}{subject} {setting}' for setting in settings]
     anchor_prompts = prompts[:2]
     extra_prompts = prompts[2:]
@@ -67,6 +67,7 @@ if __name__ == '__main__':
     parser.add_argument('--run_type', default="batch", type=str, required=False) # batch, cached
 
     parser.add_argument('--gpu', default=0, type=int, required=False)
+    parser.add_argument('--float_type', default=16, type=int, required=False)
     parser.add_argument('--seed', default=40, type=int, required=False)
     parser.add_argument('--mask_dropout', default=0.5, type=float, required=False)
     parser.add_argument('--same_latent', default=False, type=bool, required=False)
@@ -85,6 +86,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     
+    if args.float_type == 16:
+        float_type = torch.float16
+    else:
+        float_type = torch.float32
+
     for concept in args.concept_token:
         if concept not in args.subject:
             print("Concept token should be part of the subject")
@@ -99,10 +105,10 @@ if __name__ == '__main__':
         json.dump(vars(args), file, indent=4)
 
     if args.run_type == "batch":
-        run_batch(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.settings, args.out_dir, args.perform_feature_injection_bg_adain)
     elif args.run_type == "cached":
-        run_cached_anchors(args.gpu, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                            args.subject, args.concept_token, args.settings, args.cache_cpu_offloading, args.out_dir)
     else:
         print("Invalid run type")
