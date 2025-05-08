@@ -80,11 +80,18 @@ def view_images(images: Union[np.ndarray, List],
     images = [image.astype(np.uint8) for image in images] + [empty_images] * num_empty
     num_items = len(images)
 
-    h, w, c = images[0].shape
+    if images[0].ndim == 2:
+        h, w = images[0].shape
+    elif images[0].ndim == 3:
+        h, w, c = images[0].shape
     offset = int(h * offset_ratio)
     num_cols = num_items // num_rows
-    image_ = np.ones((h * num_rows + offset * (num_rows - 1),
-                      w * num_cols + offset * (num_cols - 1), 3), dtype=np.uint8) * 255
+    if images[0].ndim == 2:
+        image_ = np.ones((h * num_rows + offset * (num_rows - 1),
+                        w * num_cols + offset * (num_cols - 1)), dtype=np.uint8) * 255
+    if images[0].ndim == 3:
+        image_ = np.ones((h * num_rows + offset * (num_rows - 1),
+                        w * num_cols + offset * (num_cols - 1), 3), dtype=np.uint8) * 255
     for i in range(num_rows):
         for j in range(num_cols):
             image_[i * (h + offset): i * (h + offset) + h:, j * (w + offset): j * (w + offset) + w] = images[

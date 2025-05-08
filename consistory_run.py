@@ -12,6 +12,7 @@ from consistory_utils import FeatureInjector, AnchorCache
 from utils.general_utils import *
 import gc
 import numpy as np
+from PIL import Image
 
 from utils.ptp_utils import view_images
 
@@ -75,10 +76,10 @@ def create_latents(story_pipeline, seed, batch_size, same_latent, device, float_
 
 
 class GenerationResult:
-    def __init__(self, name: str, images, image_all):
+    def __init__(self, name: str, images, downscale_rate=2):
         self.images = images
-        self.image_all = image_all
         self.name = name
+        self.image_all = view_images([np.array(x) for x in images], display_image=False, downscale_rate=downscale_rate)
 
     def save(self, out_dir):
         dir = f'{out_dir}/{self.name}'
@@ -137,8 +138,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             callback_steps=n_steps,
                             perform_extend_attn=False,
                             num_inference_steps=n_steps)
-        image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-        results.append(GenerationResult('original sdxl', out.images, image_all))
+        results.append(GenerationResult('original sdxl', out.images, downscale_rate=downscale_rate))
     
     print(extended_attn_kwargs['t_range'])
     out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
@@ -154,8 +154,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
-    image_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
-    results.append(GenerationResult('first pass', out.images, image_all))
+    results.append(GenerationResult('first pass', out.images, downscale_rate=downscale_rate))
+    results.append(GenerationResult('first pass masks 64', transform_masks_to_images(last_masks[64], batch_size), downscale_rate=downscale_rate))
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -176,10 +176,11 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             use_consistory_feature_injection=True,
                             use_styled_feature_injection=False,
                             num_inference_steps=n_steps)
-        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-        results.append(GenerationResult('consistory', out.images, img_all))
-
+        results.append(GenerationResult('consistory', out.images, downscale_rate=downscale_rate))
+        
+        dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
+        results.append(GenerationResult('consistory dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
         torch.cuda.empty_cache()
         gc.collect()
     
@@ -197,12 +198,14 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             use_first_half_target_heads=use_target_heads,
                             use_consistory_feature_injection=False,
                             num_inference_steps=n_steps)
-        img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
-        results.append(GenerationResult(f'consistyle', out.images, img_all))
-
+        results.append(GenerationResult(f'consistyle', out.images, downscale_rate=downscale_rate))
+        
+        dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
+        results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
         torch.cuda.empty_cache()
         gc.collect()
+        
     return results
 
 # Anchors
@@ -395,3 +398,6 @@ def run_extra_generation(story_pipeline, prompts, concept_token,
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
     
     return out.images, img_all
+
+def transform_masks_to_images(masks, batch_size):
+    return [Image.fromarray(mask.reshape(64, 64).cpu().numpy()) for mask in masks]
