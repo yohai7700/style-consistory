@@ -91,7 +91,7 @@ class GenerationResult:
         
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
-                        seed=40, n_steps=1, mask_dropout=0.5,
+                        seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False, share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
@@ -153,7 +153,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         num_inference_steps=n_steps)
     last_masks = story_pipeline.attention_store.last_mask
 
-    dift_features = unet.latent_store.dift_features['1_0'][batch_size:]
+    dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
     dift_features = torch.stack([gaussian_smooth(x, kernel_size=3, sigma=1) for x in dift_features], dim=0)
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
