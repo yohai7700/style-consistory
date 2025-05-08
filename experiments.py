@@ -22,18 +22,18 @@ prompt_groups = [
     PromptGroup(
         concept_tokens=["kid"],
         prompt_templates=[
-            "{0} wearing a school uniform",
+            "portrait of {0} wearing a school uniform",
             "{0} walking with his mom",
-            "{0} reading a book",
+            "portrait {0} reading a book",
         ],
         subjects=["a kid"]
     ),
     PromptGroup(
         concept_tokens=["girl"],
         prompt_templates=[
-            "{0} wearing headphones",
-            "{0} having a picnic",
-            "{0} in the snow",
+            "portrait of {0} wearing headphones",
+            "portrait of {0} having a picnic",
+            "portrait {0} in the snow",
         ],
         subjects=["a happy girl"]
     ),
@@ -168,7 +168,7 @@ prompt_groups = [
 style_groups = [
     StyleGroup(styles=[
         "comic book illustration",
-        "photorealistic",
+        "realistic photo",
         "cartoon"
     ]),
     StyleGroup(styles=[
@@ -178,28 +178,28 @@ style_groups = [
     ]),
     StyleGroup(styles=[
         "3D animation",
-        "HDR photo",
+        "realistic photo",
         "pop art"
     ]),
     StyleGroup(styles=[
         "B&W sketch",
         "anime drawing",
-        "photorealistic"
+        "realistic photo"
     ]),
     StyleGroup(styles=[
         "Minecraft style",
-        "hyper-realistic photo",
+        "realistic photo",
         "claymation"
     ]),
     StyleGroup(styles=[
         "oil painting",
         "lineart",
-        "photorealistic"
+        "realistic photo"
     ]),
     StyleGroup(styles=[
         "pixel art",
         "watercolor painting",
-        "photorealistic"
+        "realistic photo"
     ]),
 ]
 
@@ -208,7 +208,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     style_group = style_groups[style_group_index]
     
     prompts = [
-        f"{prompt}, {style}, front view, subject facing camera"
+        f"{prompt}, {style}"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
     
