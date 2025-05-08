@@ -247,7 +247,7 @@ def get_colab_folder(seed, prompt_group_index, style_group_index):
     target.mkdir(parents=True, exist_ok=True)
 
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    out_dir = f"{target}/{ts}_seed{seed}_prompts{prompt_group_index}_styles{style_group_index}"
+    out_dir = f"{target}/{ts}_seed{seed}_prompts{prompt_group_index}_styles{style_group_index}_vinjection"
     return out_dir
 
 def make_experiment_grid_image(

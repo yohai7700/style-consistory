@@ -104,8 +104,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         anchors_cache: Optional[AnchorCache] = None,
         use_styled_feature_injection: bool = False,
         use_consistory_feature_injection: bool = False,
-        use_first_half_target_heads: bool = False,
-        target_heads: Optional[torch.Tensor] = None,
+        record_values = False,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -163,8 +162,9 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         elif perform_extend_attn and query_store and query_store.mode == 'inject':
             query = query_store.inject_query(query, self.place_in_unet, self.attnstore.curr_iter)
             
-        attention_probs = attn.get_attention_scores(attn.head_to_batch_dim(query), attn.head_to_batch_dim(key))
-        subject_mask = self.attnstore.get_attn_mask(width, 0)
+        
+        # attention_probs = attn.get_attention_scores(attn.head_to_batch_dim(query), attn.head_to_batch_dim(key))
+        # subject_mask = self.attnstore.get_attn_mask(width, 0)
         # if self.attnstore.curr_iter >= 0 and self.curr_unet_part == 'up' and width == 64 and subject_mask is not None:
         #     attention_maps = torch.zeros(20, 4096)
         #     for i in range(batch_size // 2):
@@ -172,29 +172,24 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         #         offset_i = (i + batch_size // 2)
         #         attention_maps[i * attn.heads:(i + 1) * attn.heads] = attention_probs[offset_i * attn.heads: (offset_i+1) * attn.heads, subject_mask].mean(dim=1)
         #     visualize_attention_maps(attention_maps.cpu().numpy(), f"t{self.attnstore.curr_iter}_{self.place_in_unet}")
+
             
         curr_unet_part = self.place_in_unet.split('_')[0]
-        if use_styled_feature_injection and curr_unet_part == 'up' and width == 64:
-            # target_heads = range(attn.heads//2)
+        if record_values and curr_unet_part == 'up' and width == 64:
+            self.attnstore.record_value(self.place_in_unet, value)
+        
+        if use_styled_feature_injection and feature_injector is None and curr_unet_part == 'up' and width == 64:
             for i in range(batch_size //2, batch_size):
-                if feature_injector is None:
-                    break
-                
                 nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
-                if nn_map is None:
-                    continue
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
-                # target_indices = i * attn.heads + torch.tensor(target_heads).to(key.device)
-                # if 5 <= self.attnstore.curr_iter <= 17:
-                #     other_query =   query[:batch_size//2][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                #     query[i][final_mask_tgt] *= 0
                 if 5 <= self.attnstore.curr_iter <= 15:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     key[i][final_mask_tgt] = other_key
-                if 5 <= self.attnstore.curr_iter <= 15:
-                    other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    value[i][final_mask_tgt] *= 0
+                    value = self.attnstore.get_value(self.place_in_unet)
+                # if 5 <= self.attnstore.curr_iter <= 15:
+                #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                #     value[i][final_mask_tgt] *= 0
 
         query = attn.head_to_batch_dim(query).contiguous()
 

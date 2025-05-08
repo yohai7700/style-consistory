@@ -137,6 +137,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             query_store_kwargs=query_store_kwargs,
                             callback_steps=n_steps,
                             perform_extend_attn=False,
+                            record_values=True,
                             num_inference_steps=n_steps)
         results.append(GenerationResult('original sdxl', out.images, downscale_rate=downscale_rate))
     

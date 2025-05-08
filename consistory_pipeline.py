@@ -95,6 +95,7 @@ class ConsistoryExtendAttnSDXLPipeline(
         use_first_half_target_heads = False,
         target_heads: Optional[torch.Tensor] = None,
         instance_latents: Optional[torch.FloatTensor] = None,
+        record_values = False,
         **kwargs,
     ):
         r"""
@@ -448,6 +449,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                                                 'use_first_half_target_heads': use_first_half_target_heads,
                                                 'target_heads': target_heads,
                                                 'feature_injector': feature_injector,
+                                                'record_values': record_values,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,

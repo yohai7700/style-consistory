@@ -178,7 +178,7 @@ class AnchorCache:
         self.anchors_last_mask = None
         self.dift_cache = None
 
-        self.mode = 'cache' # mode can be 'cache' or 'inject'
+        self.mode = None # mode can be 'cache' or 'inject'
 
     def set_mode(self, mode):
         self.mode = mode
