@@ -182,9 +182,9 @@ style_groups = [
         "pop art"
     ]),
     StyleGroup(styles=[
-        "B&W sketch",
         "anime drawing",
-        "realistic photo"
+        "realistic photo",
+        "B&W sketch",
     ]),
     StyleGroup(styles=[
         "Minecraft style",
