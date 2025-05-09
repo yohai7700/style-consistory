@@ -14,6 +14,22 @@
                 "${command:pickArgs}"
             ]
         },
+        {"name": "AdaIN latents consistory",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "consistory_CLI.py",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        "args": [
+            "--subject", "a cute dog",
+            "--float_type", "32",
+            "--concept_token", "dog",
+            "--settings", "sitting in the beach", "in the circus",
+            "--out_dir", "out",
+            "--n_steps", "2",
+            "--adain", "latents_type" 
+        ]
+        },
         {
             "name": "Run Consistory: Mac",
             "type": "debugpy",
@@ -45,9 +61,6 @@
         }
     ]
 }
-
-    
-
 
 
 
