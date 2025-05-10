@@ -437,8 +437,8 @@ class ConsistoryExtendAttnSDXLPipeline(
                         encoder_hidden_states=prompt_embeds,
                         timestep_cond=timestep_cond,
                         cross_attention_kwargs={'query_store': query_store, 
-                                                'perform_extend_attn': True, 
-                                                'record_attention': True, 
+                                                'perform_extend_attn': False, 
+                                                'record_attention': False, 
                                                 'feature_injector': feature_injector,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
@@ -485,7 +485,7 @@ class ConsistoryExtendAttnSDXLPipeline(
                     pass
                 
                 # Update attention store mask
-                self.attention_store.aggregate_last_steps_attention()
+                # self.attention_store.aggregate_last_steps_attention()
 
         if not output_type == "latent":
             # make sure the VAE is in float32 mode, as it overflows in float16

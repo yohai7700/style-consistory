@@ -109,7 +109,7 @@ if __name__ == '__main__':
 
 
     if args.run_type == "batch":
-        run_batch(args.gpu, float_type,args.n_steps, args.share_queries, args.perform_sdsa, args.perform_injection, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_batch(args.gpu, float_type, args.n_steps, args.share_queries, args.perform_sdsa, args.perform_injection, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.settings, args.out_dir)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
