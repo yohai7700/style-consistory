@@ -92,7 +92,8 @@ class GenerationResult:
 # Batch inference
 def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
-                        same_latent=False, share_queries=True,
+                        same_latent=False,record_queries=False,
+                        share_queries=True,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
                         downscale_rate=4, n_achors=2, 
@@ -129,6 +130,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     else:
         extended_attn_kwargs = {**default_extended_attn_kwargs, 't_range': []}
 
+    # SDXL original
     attnstore = AttentionStore(default_attention_store_kwargs)
     if perform_original_sdxl:
         out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
@@ -143,6 +145,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             num_inference_steps=n_steps)
         results.append(GenerationResult('original sdxl', out.images, downscale_rate=downscale_rate))
     
+    # first pass
     print(extended_attn_kwargs['t_range'])
     out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                         attention_store_kwargs=default_attention_store_kwargs,
@@ -150,7 +153,8 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         share_queries=share_queries,
                         query_store_kwargs=query_store_kwargs,
                         callback_steps=n_steps,
-                        num_inference_steps=n_steps)
+                        num_inference_steps=n_steps,
+                        record_queries=record_queries)
     last_masks = story_pipeline.attention_store.last_mask
 
     dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
@@ -183,7 +187,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         results.append(GenerationResult('consistory', out.images, downscale_rate=downscale_rate))
         
         dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
-        results.append(GenerationResult('consistory dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
+        # results.append(GenerationResult('consistory dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
         torch.cuda.empty_cache()
         gc.collect()
     
@@ -206,7 +210,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         results.append(GenerationResult(f'consistyle', out.images, downscale_rate=downscale_rate))
         
         dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
-        results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
+        # results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
         
         del attnstore
         torch.cuda.empty_cache()

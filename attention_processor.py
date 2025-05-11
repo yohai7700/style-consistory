@@ -25,6 +25,11 @@ from adain import adain_style
 from consistory_utils import AnchorCache, FeatureInjector, QueryStore, xformers
 from utils.ptp_utils import AttentionStore
 import matplotlib.pyplot as plt
+import torch
+import torch.fft as fft
+from PIL import Image
+import torchvision.transforms as T
+
 
 
 class ConsistoryAttnStoreProcessor:
@@ -90,6 +95,32 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         self.keys_cache = None
         self.values_cache = None
 
+
+    def fft_compose(queries, radius_ratio=0.1):
+        B, C, H, W = queries.shape
+
+        # Apply FFT
+        frequencies = fft.fft2(queries)
+        fft_shifted = fft.fftshift(frequencies)
+
+        # Create circular mask
+        center = H // 2
+        Y, X = torch.meshgrid(torch.arange(H), torch.arange(W), indexing='ij')
+        dist = torch.sqrt((X - center) ** 2 + (Y - center) ** 2)
+        radius = radius_ratio * center
+        mask = (dist <= radius).float()
+        mask = mask.view(1, 1, H, W).expand(B, C, H, W)
+
+        # Apply low/high masks
+        low_fft = fft_shifted * mask
+        high_fft = fft_shifted * (1 - mask)
+
+        # Inverse FFT
+        low_img = fft.ifft2(fft.ifftshift(low_fft)).abs()
+        high_img = fft.ifft2(fft.ifftshift(high_fft)).abs()
+
+        return low_fft, high_fft
+
     def __call__(
         self,
         attn: Attention,
@@ -105,6 +136,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         use_styled_feature_injection: bool = False,
         use_consistory_feature_injection: bool = False,
         record_values = False,
+        record_queries = False,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -177,22 +209,36 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         curr_unet_part = self.place_in_unet.split('_')[0]
         if record_values and curr_unet_part == 'up' and width == 64 and 5 <= self.attnstore.curr_iter <= 15:
             self.attnstore.record_value(self.place_in_unet, value)
+            self.attnstore.record_key(self.place_in_unet, key)
+        
+        if record_queries and curr_unet_part == 'up' and width == 64:
+            self.attnstore.record_query(self.place_in_unet, query)
         
         if use_styled_feature_injection and feature_injector is not None and curr_unet_part == 'up' and width == 64:
             for i in range(batch_size //2, batch_size):
                 nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
                 
                 curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
-                if 5 <= self.attnstore.curr_iter <= 15:
+
+                other_queries = self.attnstore.get_quert(self.place_in_unet).to(value.device)
+                other_query_high_freq = self.fft_compose(other_queries)
+
+                if 5 <= self.attnstore.curr_iter <= 15: # key, query first pass, value sdxl vanila
+                    # key = self.attnstore.get_key(self.place_in_unet).to(value.device)
                     other_query = query[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    query[i][final_mask_tgt] = other_query
+                
+                    query[i][final_mask_tgt] = other_query 
                     key[i][final_mask_tgt] = other_key
+                    
                     value = self.attnstore.get_value(self.place_in_unet).to(value.device)
                 # if 5 <= self.attnstore.curr_iter <= 15:
                 #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 #     value[i][final_mask_tgt] *= 0
 
+        curr_q_high_freq = self.fft_compose(query)
+        blneding_factor = 0.5
+                    
         query = attn.head_to_batch_dim(query).contiguous()
 
         if perform_extend_attn:

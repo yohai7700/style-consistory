@@ -15,7 +15,7 @@ from experiments import make_experiment_grid_image
 def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'],
               settings=["sitting in the beach", "standing in the snow"],
-              out_dir = None, perform_feature_injection_bg_adain=False):
+              out_dir = None, record_queries=False, perform_feature_injection_bg_adain=False):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu, float_type)
@@ -29,7 +29,7 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
             ]
     concept_token=['dog']
 
-    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, background_adain=None)
+    results = run_batch_generation(story_pipeline, prompts, concept_token, seed, mask_dropout=mask_dropout, same_latent=same_latent, record_queries=record_queries, background_adain=None)
 
     for result in results:
         result.save(out_dir)
@@ -80,7 +80,9 @@ if __name__ == '__main__':
                         type=str, nargs='*', required=False)
     parser.add_argument('--cache_cpu_offloading', default=False, type=bool, required=False)
     parser.add_argument('--perform_feature_injection_bg_adain', default=False, type=bool, required=False)
-    
+
+    parser.add_argument('--record_queries', default=False, type=bool, required=False)
+
     parser.add_argument('--out_dir', default=None, type=str, required=False)
     parser.add_argument('--perform_background_adain', default=True, type=bool, required=False)
 
@@ -106,7 +108,7 @@ if __name__ == '__main__':
 
     if args.run_type == "batch":
         run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
-                  args.subject, args.concept_token, args.settings, args.out_dir, args.perform_feature_injection_bg_adain)
+                  args.subject, args.concept_token, args.settings, args.out_dir,args.record_queries, args.perform_feature_injection_bg_adain)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                            args.subject, args.concept_token, args.settings, args.cache_cpu_offloading, args.out_dir)
