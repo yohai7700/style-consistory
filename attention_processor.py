@@ -177,8 +177,12 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         curr_unet_part = self.place_in_unet.split('_')[0]
         if record_values and curr_unet_part == 'up' and width == 64 and 5 <= self.attnstore.curr_iter <= 15:
             self.attnstore.record_value(self.place_in_unet, value)
+            self.attnstore.record_key(self.place_in_unet, key)
         
         if use_styled_feature_injection and feature_injector is not None and curr_unet_part == 'up' and width == 64:
+            if 5 <= self.attnstore.curr_iter <= 15:
+              value = self.attnstore.get_value(self.place_in_unet).to(value.device)
+              # key = self.attnstore.get_key(self.place_in_unet).to(key.device)
             for i in range(batch_size //2, batch_size):
                 nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
                 
@@ -188,7 +192,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     query[i][final_mask_tgt] = other_query
                     key[i][final_mask_tgt] = other_key
-                    value = self.attnstore.get_value(self.place_in_unet).to(value.device)
+                    
                 # if 5 <= self.attnstore.curr_iter <= 15:
                 #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 #     value[i][final_mask_tgt] *= 0

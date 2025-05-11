@@ -129,6 +129,7 @@ class AttentionStore:
         self.last_mask = {res: None for res in self.ALL_RES}
         self.last_mask_dropout = {res: None for res in self.ALL_RES}
         self.values = {}
+        self.keys = {}
 
     def __call__(self, attn, is_cross: bool, place_in_unet: str, attn_heads: int):
         if is_cross and attn.shape[1] == np.prod(self.attn_res):
@@ -140,8 +141,14 @@ class AttentionStore:
     def record_value(self, place_in_unet, value):
         self.values[f"{place_in_unet}_{self.curr_iter}"] = value.clone().detach().cpu()
     
+    def record_key(self, place_in_unet, key):
+        self.keys[f"{place_in_unet}_{self.curr_iter}"] = key.clone().detach().cpu()
+
     def get_value(self, place_in_unet):
         return self.values.get(f"{place_in_unet}_{self.curr_iter}")
+      
+    def get_key(self, place_in_unet):
+        return self.keys.get(f"{place_in_unet}_{self.curr_iter}")
 
     def reset(self):
         self.step_store = defaultdict(list)
