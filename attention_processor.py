@@ -120,6 +120,16 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         high_img = fft.ifft2(fft.ifftshift(high_fft)).abs()
 
         return low_fft, high_fft
+    
+    def inverse_fft_compose(high_fft, low_fft=None):
+                # Inverse FFT
+        high_features = fft.ifft2(fft.ifftshift(low_fft)).abs()
+        if low_fft is not None:
+            low_features = fft.ifft2(fft.ifftshift(high_fft)).abs()
+        else: 
+            low_features=None
+
+        return high_features, low_features
 
     def __call__(
         self,

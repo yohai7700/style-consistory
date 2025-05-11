@@ -42,7 +42,8 @@
                 "--float_type", "32",
                 "--concept_token", "dog",
                 "--settings", "sitting in the beach", "in the circus",
-                "--out_dir", "out"
+                "--out_dir", "out",
+                "--n_steps", "1"
             ]
         },
                 {
