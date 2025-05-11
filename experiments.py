@@ -22,9 +22,9 @@ prompt_groups = [
     PromptGroup(
         concept_tokens=["kid"],
         prompt_templates=[
-            "portrait of {0} wearing a school uniform",
-            "{0} walking with his mom",
-            "portrait {0} reading a book",
+            "{0} wearing a school uniform, close up",
+            "{0} in the park, close up",
+            "{0} reading a book, close up",
         ],
         subjects=["a kid"]
     ),
@@ -33,7 +33,7 @@ prompt_groups = [
         prompt_templates=[
             "portrait of {0} wearing headphones",
             "portrait of {0} having a picnic",
-            "portrait {0} in the snow",
+            "portrait of {0} in the snow",
         ],
         subjects=["a happy girl"]
     ),
@@ -148,9 +148,9 @@ prompt_groups = [
     PromptGroup(
         concept_tokens=["boat"],
         prompt_templates=[
-            "{0} sailing on a boat",
+            "{0} sailing",
             "{0} docking at a pier",
-            "{0} fishing off a boat",
+            "{0} fishing at sea",
         ],
         subjects=["a boat"]
     ),
@@ -234,7 +234,10 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         "concept_tokens": prompt_group.concept_tokens,
         "styles": style_group.styles
     })
-    make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
+    make_experiment_grid_image(f"Experiment: seed {seed}, prompts {prompt_group_index}, style {style_group_index}", 
+                               results, 
+                               prompts, 
+                               save_path=f"{colab_folder}/results-grid.png")
     return results
 
 def get_colab_folder(seed, prompt_group_index, style_group_index):
@@ -251,6 +254,7 @@ def get_colab_folder(seed, prompt_group_index, style_group_index):
     return out_dir
 
 def make_experiment_grid_image(
+    title: str,
     results: List[GenerationResult],
     prompts: List[str],
     figsize=(8, 8),
@@ -275,7 +279,9 @@ def make_experiment_grid_image(
                               ha="right",
                               va="center",
                               labelpad=10)
-    plt.tight_layout()
+    # Add a global title to the figure
+    fig.suptitle(title, fontsize=16)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])  # adjust layout to make room for the title
     if save_path:
         plt.savefig(save_path, bbox_inches="tight")
     return fig
