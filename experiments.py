@@ -234,8 +234,10 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         "concept_tokens": prompt_group.concept_tokens,
         "styles": style_group.styles
     })
+
+    grid_presented_results = [result for result in results if (result.name != "first pass masks 64" and result.name != "consistory dift masks")]
     make_experiment_grid_image(f"Experiment: seed {seed}, prompts {prompt_group_index}, style {style_group_index}", 
-                               results, 
+                               grid_presented_results, 
                                prompts, 
                                save_path=f"{colab_folder}/results-grid.png")
     return results
