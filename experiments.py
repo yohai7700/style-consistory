@@ -6,19 +6,21 @@ from typing import List
 
 import matplotlib.pyplot as plt
 from consistory_run import run_batch_generation, GenerationResult
+# from google import colab
 
 @dataclass
 class PromptGroup:
     def __init__(self, concept_tokens: List[str], prompt_templates: List[str], subjects: List[str]):
         self.concept_tokens = concept_tokens
         self.prompts = [template.format(*subjects) for template in prompt_templates]
-        
+        #  0,1,4,
 @dataclass
 class StyleGroup:
     def __init__(self, styles: List[str]):
         self.styles = styles
         
 prompt_groups = [
+    #0
     PromptGroup(
         concept_tokens=["kid"],
         prompt_templates=[
@@ -28,15 +30,19 @@ prompt_groups = [
         ],
         subjects=["a kid"]
     ),
+    #1
     PromptGroup(
         concept_tokens=["girl"],
         prompt_templates=[
             "portrait of {0} wearing headphones",
             "portrait of {0} having a picnic",
-            "portrait {0} in the snow",
+            "portrait of {0} in the snow",
+            "portrait of {0}, Eiifel Tower in the background",
+            "portrait of {0} hiking in the mountains",
         ],
         subjects=["a happy girl"]
     ),
+    #2
     PromptGroup(
         concept_tokens=["man"],
         prompt_templates=[
@@ -109,12 +115,15 @@ prompt_groups = [
         ],
         subjects=["a cat"]
     ),
+    # 10
     PromptGroup(
         concept_tokens=["kitten"],
         prompt_templates=[
-            "{0} sleeping in a bed",
+            "{0} smelling a flower",
             "{0} playing with a toy",
             "{0} climbing a tree",
+            "{0} in the beach",
+            "{0} playing in the grass"
         ],
         subjects=["a kitten"]
     ),
@@ -163,47 +172,79 @@ prompt_groups = [
         ],
         subjects=["a boat"]
     ),
-]
-
+        PromptGroup(
+        concept_tokens=["dragon"],
+        prompt_templates=[
+            "{0} flying over a mountain",
+            "{0} breathing fire",
+            "{0} perched on a cliff",
+            "{0} guarding a treasure",
+            "{0} soaring through the clouds",
+        ],
+        subjects=["a cute dragon"]
+    ),
+] 
+   
 style_groups = [
+    #0
     StyleGroup(styles=[
         "comic book illustration",
         "realistic photo",
         "cartoon"
     ]),
+    #1
     StyleGroup(styles=[
         "digital painting",
         "low poly",
         "abstract"
     ]),
+    #2
     StyleGroup(styles=[
         "3D animation",
         "realistic photo",
         "pop art"
     ]),
+    #3
     StyleGroup(styles=[
         "anime drawing",
         "realistic photo",
-        "B&W sketch",
+        "fantasy book illustration",
+        "watercolor painting",
+        "pixel art"
     ]),
+    #4
     StyleGroup(styles=[
         "Minecraft style",
         "realistic photo",
         "claymation"
     ]),
+    #5
     StyleGroup(styles=[
+        "watercolor painting",
+        "fantasy book illustration",
+        "minecraft style",
         "oil painting",
-        "lineart",
-        "realistic photo"
+        "lineart"
     ]),
+    #5
     StyleGroup(styles=[
         "pixel art",
         "watercolor painting",
         "realistic photo"
     ]),
+    #6
+    StyleGroup(styles=[
+        "fantasy art",
+        "dramatic drawing",
+        "book cover",
+        "3D animation",
+        "lego style",
+    ]),
+
 ]
 
-def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5, same_latent=False, **kwargs):
+def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
+                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], **kwargs):
     prompt_group = prompt_groups[prompt_group_index]
     style_group = style_groups[style_group_index]
     
@@ -211,15 +252,16 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         f"{prompt}, {style}"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
-    
+    colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
     results = run_batch_generation(pipeline,
                                    prompts=prompts, 
                                    concept_token=prompt_group.concept_tokens, 
                                    seed=seed,
                                    mask_dropout=mask_dropout,
+                                   attn_v_range=attn_v_range,
+                                   attn_qk_range=attn_qk_range,
                                    **kwargs)
     
-    colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
     for result in results:
         result.save(colab_folder)
         print(f"Saved {result.name} to {colab_folder}")
@@ -237,9 +279,10 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
     return results
 
-def get_colab_folder(seed, prompt_group_index, style_group_index):
-    from google.colab import drive
-    drive.mount("/content/drive")
+def get_colab_folder(seed, prompt_group_index, style_group_index, to_mount=False):
+    # if to_mount:
+    #     from google import colab
+    #     colab.drive.mount("/content/drive")
     
     folder = "Consistyle - Experiments"
     root = pathlib.Path("/content/drive/MyDrive")

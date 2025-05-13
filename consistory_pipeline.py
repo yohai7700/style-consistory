@@ -97,6 +97,8 @@ class ConsistoryExtendAttnSDXLPipeline(
         instance_latents: Optional[torch.FloatTensor] = None,
         record_values = False,
         record_queries = False,
+        attn_v_range = [3,10],
+        attn_qk_range = [5,15],
         attnstore: AttentionStore = None,
         **kwargs,
     ):
@@ -456,6 +458,8 @@ class ConsistoryExtendAttnSDXLPipeline(
                                                 'feature_injector': feature_injector,
                                                 'record_values': record_values,
                                                 'record_queries': record_queries,
+                                                'attn_v_range': attn_v_range,
+                                                'attn_qk_range': attn_qk_range,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,

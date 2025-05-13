@@ -10,6 +10,7 @@ from consistory_unet_sdxl import ConsistorySDXLUNet2DConditionModel
 from consistory_pipeline import ConsistoryExtendAttnSDXLPipeline
 from consistory_utils import FeatureInjector, AnchorCache
 from utils.general_utils import *
+from utils.latent_utils import load_latents_or_invert_images
 import gc
 import numpy as np
 from PIL import Image
@@ -94,12 +95,15 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False,record_queries=False,
                         share_queries=True,
+                        invert = False,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
                         downscale_rate=4, n_achors=2, 
                         background_adain=None,
-                        perform_original_sdxl=False,
-                        use_target_heads=False):
+                        perform_original_sdxl=True,
+                        use_target_heads=False,
+                        attn_v_range=[3,10], attn_qk_range=[5,15]):
+
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
     float_type = story_pipeline.dtype
@@ -119,6 +123,10 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     default_extended_attn_kwargs = {'extend_kv_unet_parts': ['up']}
     query_store_kwargs= {'t_range': [0,n_steps], 'strength_start': 0.9, 'strength_end': 0.81836735}
 
+    # if invert:
+    #     latents, noises = load_latents_or_invert_images(model=model, cfg=cfg)
+    #     model.set_latents(latents)
+    #     model.set_noise(noises)
     latents, g = create_latents(story_pipeline, seed, batch_size, same_latent, device, float_type)
 
     # ------------------ #
@@ -141,6 +149,9 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             callback_steps=n_steps,
                             perform_extend_attn=False,
                             record_values=True,
+                            attn_v_range = attn_v_range,
+                            attn_qk_range = attn_qk_range,
+                            record_queries=False,
                             attnstore=attnstore,
                             num_inference_steps=n_steps)
         results.append(GenerationResult('original sdxl', out.images, downscale_rate=downscale_rate))
@@ -151,10 +162,12 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         attention_store_kwargs=default_attention_store_kwargs,
                         extended_attn_kwargs=extended_attn_kwargs,
                         share_queries=share_queries,
+                        attn_qk_range=attn_qk_range,
                         query_store_kwargs=query_store_kwargs,
                         callback_steps=n_steps,
                         num_inference_steps=n_steps,
-                        record_queries=record_queries)
+                        record_queries=False,
+                        attnstore=attnstore)
     last_masks = story_pipeline.attention_store.last_mask
 
     dift_features = unet.latent_store.dift_features['261_0'][batch_size:]
@@ -162,7 +175,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
     results.append(GenerationResult('first pass', out.images, downscale_rate=downscale_rate))
-    results.append(GenerationResult('first pass masks 64', transform_masks_to_images(last_masks[64], batch_size), downscale_rate=downscale_rate))
+    # results.append(GenerationResult('first pass masks 64', transform_masks_to_images(last_masks[64], batch_size), downscale_rate=downscale_rate))
 
     torch.cuda.empty_cache()
     gc.collect()
@@ -205,7 +218,9 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             use_first_half_target_heads=use_target_heads,
                             use_consistory_feature_injection=False,
                             attnstore=attnstore,
-                            num_inference_steps=n_steps)
+                            num_inference_steps=n_steps,
+                            attn_v_range=attn_v_range,
+                            attn_qk_range=attn_qk_range)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
         results.append(GenerationResult(f'consistyle', out.images, downscale_rate=downscale_rate))
         

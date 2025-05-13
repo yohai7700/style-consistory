@@ -1,0 +1,186 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Install All Recommended Extensions",
+				"type": "shell",
+				"windows": {
+					"command": "foreach ($ext in (Get-Content -Raw .vscode/extensions.json | ConvertFrom-Json).recommendations) { Write-Host Installing $ext; code --install-extension $ext; }"
+				},
+				"linux": {
+					"command": "cat .vscode/extensions.json | jq .recommendations[] | xargs -n 1 code . --install-extension"
+				},
+				"runOptions": {
+					"runOn": "folderOpen"
+				},
+				"presentation": {
+					"reveal": "silent"
+				},
+				"problemMatcher" : []
+			},
+		]
+	},
+
+	"settings": {
+		"debug.console.lineHeight": 30,
+		// "terminal.integrated.profiles.osx":{
+		// 	"bash": {
+		// 		"path": "zsh"
+		// 	}
+		// },
+
+
+		"terminal.integrated.profiles.linux":{
+			"bash": {
+				"path": "bash"
+			}
+		},
+
+		"terminal.integrated.env.osx": {
+			"PYTHONPATH": "${env:PYTHONPATH}:",
+			"JUPYTERPATH": "${env:JUPYTERPATH}:",
+		},
+		
+		"terminal.integrated.env.linux": {
+			"PYTHONPATH": "${env:PYTHONPATH}:",
+			"JUPYTERPATH": "${env:JUPYTERPATH}:",
+		},
+		"jupyter.debugJustMyCode": false,
+		"files.watcherExclude": {
+			// "/mnt/**/*": true,
+		},
+		"git.ignoreLimitWarning": true,
+		"search.exclude": {
+			// "/mnt/**/*": true
+		},
+		"vsintellicode.features.python.deepLearning": "enabled",
+		"python.analysis.completeFunctionParens": true,
+		"python.analysis.diagnosticMode": "openFilesOnly",
+		"python.autoComplete.extraPaths": [
+
+			// "/ws/examples-dev",
+			// "/ws/algo_scripts",
+		],
+		"python.analysis.extraPaths": [
+			// "/ws/examples-dev",
+			// "/ws/algo_scripts",
+		],
+		// "git.ignoredRepositories": [
+		// 	"/ws/pycoral"
+		// ],
+		// "search.followSymlinks": false,
+		// "python.languageServer": "Jedi",
+		"workbench.colorCustomizations": {
+    
+        
+			"terminal.foreground": "#eff0eb",
+			"terminal.ansiBlack": "#282a36",
+			"terminal.ansiRed": "#ff5c57",
+			"terminal.ansiGreen": "#5af78e",
+			"terminal.ansiYellow": "#f3f99d",
+			"terminal.ansiBlue": "#57c7ff",
+			"terminal.ansiMagenta": "#ff6ac1",
+			"terminal.ansiCyan": "#9aedfe",
+			"terminal.ansiWhite": "#f1f1f0",
+			"terminal.ansiBrightBlack": "#686868",
+			"terminal.ansiBrightRed": "#ff5c57",
+			"terminal.ansiBrightGreen": "#5af78e",
+			"terminal.ansiBrightYellow": "#f3f99d",
+			"terminal.ansiBrightBlue": "#57c7ff",
+			"terminal.ansiBrightMagenta": "#ff6ac1",
+			"terminal.ansiBrightCyan": "#9aedfe",
+			"terminal.ansiBrightWhite": "#eff0eb"
+		},
+		"vim.hlsearch": true,
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+
+			{
+				"name": "Python: Current File with Arguments",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${file}",
+				"console": "integratedTerminal",
+				"args": [
+					"${command:pickArgs}"
+				]
+			},
+			{
+				"name": "AdaIN latents consistory",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "consistory_CLI.py",
+				"console": "integratedTerminal",
+				"justMyCode": false,
+				"args": [
+					"--subject", "a cute dog",
+					"--float_type", "32",
+					"--concept_token", "dog",
+					"--settings", "sitting in the beach", "in the circus",
+					"--out_dir", "out",
+					"--n_steps", "2",
+					"--adain", "latents_type"
+				]
+			},
+			{
+			"name": "Run Consistory: Mac",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "consistory_CLI.py",
+			"console": "integratedTerminal",
+			"justMyCode": false,
+			"args": [
+				"--subject", "a cute dog",
+				"--float_type", "32",
+				"--concept_token", "dog",
+				"--settings", "sitting in the beach", "in the circus",
+				"--out_dir", "out",
+				"--n_steps", "1"
+			]
+		},
+		{
+            "name": "Run Consistory: colab_server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "consistory_CLI.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+				"--seed", "250",
+				"--record_queries", "True",
+				"--prompts", "portrait of a happy girl wearing headphones, anime drawing",
+				 "portrait of a happy girl having a picnic, realistic photo",
+				  "portrait a happy girl in the snow, black and white sketch",
+				"--perform_consistory_injection","False",
+                "--concept_token", "girl",
+                "--out_dir", "out"
+            ]
+        },
+		{
+            "name": "Run Consistory: colab_server_experiments_v100",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "consistory_CLI.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--run_experiments", "1,3,100",
+                "--out_dir", "out",
+				"--perform_consistory_injection","True",
+				"--mask_dropout", "0.05",
+				"--attn_v_range", "3","10",
+				"--attn_qk_range", "5","15",
+            ]
+        }
+	]
+	}
+}
+			

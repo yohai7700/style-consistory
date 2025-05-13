@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+      "donjayamanne.python-extension-pack",
+      "GitHub.copilot",
+      "GitHub.copilot-chat",
+      "ms-toolsai.jupyter", 
+      "ms-python.debugpy"
+    ],
+    "unwantedRecommendations": []
+  }
