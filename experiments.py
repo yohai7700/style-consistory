@@ -52,6 +52,7 @@ prompt_groups = [
         ],
         subjects=["a man"]
     ),
+    #3
     PromptGroup(
         concept_tokens=["woman"],
         prompt_templates=[
@@ -61,6 +62,7 @@ prompt_groups = [
         ],
         subjects=["a woman"]
     ),
+    #4
     PromptGroup(
         concept_tokens=["dog"],
         prompt_templates=[
@@ -70,6 +72,7 @@ prompt_groups = [
         ],
         subjects=["a dog"]
     ),
+    #5
     PromptGroup(
         concept_tokens=["dog"],
         prompt_templates=[
@@ -79,6 +82,7 @@ prompt_groups = [
         ],
         subjects=["a dog"]
     ),
+    #6
     PromptGroup(
         concept_tokens=["puppy"],
         prompt_templates=[
@@ -88,6 +92,7 @@ prompt_groups = [
         ],
         subjects=["a puppy"]
     ),
+    #7
     PromptGroup(
         concept_tokens=["puppy"],
         prompt_templates=[
@@ -97,6 +102,7 @@ prompt_groups = [
         ],
         subjects=["a puppy"]
     ),
+    #8
     PromptGroup(
         concept_tokens=["cat"],
         prompt_templates=[
@@ -106,6 +112,7 @@ prompt_groups = [
         ],
         subjects=["a cat"]
     ),
+    #9
     PromptGroup(
         concept_tokens=["cat"],
         prompt_templates=[
@@ -127,6 +134,7 @@ prompt_groups = [
         ],
         subjects=["a kitten"]
     ),
+    # 11
     PromptGroup(
         concept_tokens=["kitten"],
         prompt_templates=[
@@ -136,6 +144,7 @@ prompt_groups = [
         ],
         subjects=["a kitten"]
     ),
+    # 12
     PromptGroup(
         concept_tokens=["car"],
         prompt_templates=[
@@ -145,6 +154,7 @@ prompt_groups = [
         ],
         subjects=["a car"]
     ),
+    # 13
     PromptGroup(
         concept_tokens=["car"],
         prompt_templates=[
@@ -154,6 +164,7 @@ prompt_groups = [
         ],
         subjects=["a car"]
     ),
+    # 14
     PromptGroup(
         concept_tokens=["boat"],
         prompt_templates=[
@@ -163,6 +174,7 @@ prompt_groups = [
         ],
         subjects=["a boat"]
     ),
+    # 15
     PromptGroup(
         concept_tokens=["boat"],
         prompt_templates=[
@@ -172,6 +184,7 @@ prompt_groups = [
         ],
         subjects=["a boat"]
     ),
+    # 16
         PromptGroup(
         concept_tokens=["dragon"],
         prompt_templates=[
@@ -208,7 +221,7 @@ style_groups = [
     StyleGroup(styles=[
         "anime drawing",
         "realistic photo",
-        "fantasy book illustration",
+        "B&W sketch",
         "watercolor painting",
         "pixel art"
     ]),
@@ -220,21 +233,21 @@ style_groups = [
     ]),
     #5
     StyleGroup(styles=[
-        "watercolor painting",
+        "low poly style",
         "fantasy book illustration",
         "minecraft style",
         "oil painting",
         "lineart"
     ]),
-    #5
+    #6
     StyleGroup(styles=[
         "pixel art",
         "watercolor painting",
         "realistic photo"
     ]),
-    #6
+    #7
     StyleGroup(styles=[
-        "fantasy art",
+        "Artstyle Renaissance",
         "dramatic drawing",
         "book cover",
         "3D animation",
@@ -270,6 +283,8 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         "prompt_group_index": prompt_group_index,
         "style_group_index": style_group_index,
         "seed": seed,
+        "attn_v_range": attn_v_range,
+        "attn_qk_range": attn_qk_range,
         "mask_dropout": mask_dropout,
         "same_latent": same_latent,
         "prompts": prompts,
