@@ -172,12 +172,13 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "--run_experiments", "16,7,100",
+                "--run_experiments", "0,0,100;1,0,100;2,0,100;3,0,100;4,0,100;5,0,100",
                 "--out_dir", "out",
 				"--perform_consistory_injection","False",
-				"--mask_dropout", "0.05",
-				"--attn_v_range", "3","12",
+				"--mask_dropout", "0.5",
+				"--attn_v_range", "5","15",
 				"--attn_qk_range", "5","15",
+
             ]
         }
 	]
