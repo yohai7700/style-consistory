@@ -187,6 +187,7 @@ prompt_groups = [
     ),
     # 16
     PromptGroup(
+    PromptGroup(
         concept_tokens=["dragon"],
         prompt_templates=[
             "{0} flying over a mountain",
