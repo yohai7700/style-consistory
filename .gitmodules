@@ -1,0 +1,3 @@
+[submodule "utils/ReNoise"]
+	path = utils/ReNoise
+	url = https://github.com/garibida/ReNoise-Inversion.git
