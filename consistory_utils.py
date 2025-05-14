@@ -175,6 +175,7 @@ class AnchorCache:
     def __init__(self):
         self.input_h_cache = {} # place_in_unet, iter, h_in
         self.h_out_cache = {} # place_in_unet, iter, h_out
+        self.attn_cache = {} # place_in_unet, iter, type (q or k)
         self.anchors_last_mask = None
         self.dift_cache = None
 
@@ -194,6 +195,18 @@ class AnchorCache:
 
     def is_cache_mode(self):
         return self.mode == 'cache'
+    
+    def cache_attn_component(self, place_in_unet: str, t: int, type: str, key: torch.Tensor, mask: torch.Tensor):
+        label = f"{place_in_unet}_{t}_{type}"
+        self.attn_cache[label] = (key.shape, mask.nonzero(), key[mask].flatten(dim=-2))
+
+    def get_attn_component(self, place_in_unet: str, t: int, type: str):
+        label = f"{place_in_unet}_{t}_{type}"
+        shape, coords, flattened_key = self.attn_cache[label]
+
+        result = torch.zeros(shape)
+        result.index_put_(coords, flattened_key, accumulate=False)
+        return result
 
 
     def to_device(self, device):

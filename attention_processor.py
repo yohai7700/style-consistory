@@ -250,9 +250,12 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         #     self.attnstore.record_query(self.place_in_unet, query)
         
         if use_styled_feature_injection and feature_injector is not None and curr_unet_part == 'up' and width == 64:
+            if anchors_cache:
+                if anchors_cache.is_cache_mode():
+                    for i in range(batch_size //2):
+                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "k", key[i + batch_size//2], self.attnstore.get_attn_mask(width, i))
+                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "q", query[i + batch_size//2], self.attnstore.get_attn_mask(width, i))
             for i in range(batch_size //2, batch_size):
-
-
                 # other_queries = self.attnstore.get_query(self.place_in_unet).to(value.device)
                 # _ , other_query_high_freq = self.fft_compose(query)
 
@@ -271,9 +274,6 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     
                 if attn_v_range[0] <= self.attnstore.curr_iter <= attn_v_range[1]:
                      value = self.attnstore.get_value(self.place_in_unet).to(value.device)
-                # if 5 <= self.attnstore.curr_iter <= 15:
-                #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                #     value[i][final_mask_tgt] *= 0
 
                     # query = self.inverse_fft_compose(query, other_query_high_freq)
                 # blneding_factor = 0.5

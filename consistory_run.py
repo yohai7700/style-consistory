@@ -125,8 +125,10 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     default_attention_store_kwargs = {
         'token_indices': token_indices,
         'mask_dropout': mask_dropout,
-        'extended_mapping': anchor_mappings
     }
+
+    if not generate_anchors and anchor_cache_first_stage is None:
+        default_attention_store_kwargs['extended_mapping'] = create_anchor_mapping(batch_size, anchor_indices=list(range(n_achors)))
 
     default_extended_attn_kwargs = {'extend_kv_unet_parts': ['up']}
     query_store_kwargs= {'t_range': [0,n_steps], 'strength_start': 0.9, 'strength_end': 0.81836735}
@@ -465,7 +467,7 @@ def run_extra_generation(story_pipeline, prompts, concept_token,
 
 def run_generation_with_auto_anchors(pipeline, prompts, n_anchors, **kwargs):
     anchor_prompts = prompts[:n_anchors]
-    results, anchor_cache_first_stage, anchor_cache_second_stage = run_batch_generation(**kwargs, prompts=anchor_prompts, generate_anchors=True)
+    results, anchor_cache_first_stage, anchor_cache_second_stage = run_batch_generation(pipeline, prompts=anchor_prompts, generate_anchors=True, **kwargs)
 
     extra_prompts = prompts[n_anchors:]
     for i, extra_prompt in enumerate(extra_prompts):
@@ -475,9 +477,9 @@ def run_generation_with_auto_anchors(pipeline, prompts, n_anchors, **kwargs):
                                              anchor_cache_second_stage=anchor_cache_second_stage,
                                              **kwargs,
                                             )
-        for result in extra_results:
-            result.name = f"extra {i} - {result.name}"
-        results = [*results, *extra_results]
+        
+        for j in range(len(extra_results)):
+            results[j].images = [*results[j].images, *extra_results[j].images]
     return results
 
 def transform_masks_to_images(masks, batch_size):
