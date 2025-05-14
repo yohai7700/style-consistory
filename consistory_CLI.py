@@ -15,7 +15,8 @@ from experiments import make_experiment_grid_image, run_batch_experiment, write_
 def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'], prompts=None,
               out_dir = None, record_queries=False, invert=False, perform_feature_injection_bg_adain=False,
-                perform_consistory_injection=False, run_experiments=None, attn_v_range=[3,10], attn_qk_range=[5,15]):
+                perform_consistory_injection=False, run_experiments=None, attn_v_range=[3,10], attn_qk_range=[5,15],
+                use_auto_anchors=False, experiment_folder=None):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
     story_pipeline = load_pipeline(gpu, float_type)
@@ -34,7 +35,9 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
                 mask_dropout=mask_dropout,
                 attn_v_range=attn_v_range,
                 attn_qk_range=attn_qk_range,
-                )
+                use_auto_anchors=use_auto_anchors,
+                experiment_folder=experiment_folder,
+            )
             
             
     else:
@@ -105,7 +108,8 @@ if __name__ == '__main__':
     parser.add_argument('--perform_background_adain', default=True, type=bool, required=False)
     parser.add_argument('--run_experiments', default=[(0, 0, 100)], type=lambda s: [tuple(map(int, item.split(','))) for item in s.split(';')], 
                         help="List of tuples in the format 'x,y,z;x,y,z'")
-
+    parser.add_argument('--use_auto_anchors', default=False, type=bool, required=False)
+    parser.add_argument('--experiment_folder', default=None, type=str, required=False)
     args = parser.parse_args()
     
     if args.float_type == 16:
@@ -131,7 +135,8 @@ if __name__ == '__main__':
         run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.prompts, args.out_dir,args.record_queries,
                   args.invert, args.perform_feature_injection_bg_adain, args.perform_consistory_injection,
-                    args.run_experiments, args.attn_v_range, args.attn_qk_range)
+                    args.run_experiments, args.attn_v_range, args.attn_qk_range, args.use_auto_anchors,
+                    args.experiment_folder)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
                            args.subject, args.concept_token, args.settings, args.cache_cpu_offloading, args.out_dir)

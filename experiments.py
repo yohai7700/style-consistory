@@ -737,18 +737,23 @@ new_style_groups = [
 ]
 
 def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
-                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], use_auto_anchors=False, **kwargs):
-    prompt_group = prompt_groups[prompt_group_index]
-    style_group = style_groups[style_group_index]
+                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], 
+                          use_auto_anchors=False, experiment_folder=None, **kwargs):
+    # prompt_group = prompt_groups[prompt_group_index]
+    # style_group = style_groups[style_group_index]
+
+    prompt_group = new_prompt_groups[prompt_group_index]
+    style_group = new_style_groups[style_group_index]
     
     prompts = [
         f"{prompt}, {style}"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
-    colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
+    colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index, experiment_folder=experiment_folder)
     run_generation = run_generation_with_auto_anchors if use_auto_anchors else run_batch_generation
     results = run_generation(pipeline,
                     prompts=prompts, 
+                    n_anchors=2,
                     concept_token=prompt_group.concept_tokens, 
                     seed=seed,
                     mask_dropout=mask_dropout,
@@ -775,7 +780,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
     return results
 
-def get_colab_folder(seed, prompt_group_index, style_group_index, to_mount=False):
+def get_colab_folder(seed, prompt_group_index, style_group_index, experiment_folder=None, to_mount=False):
     # if to_mount:
     #     from google import colab
     #     colab.drive.mount("/content/drive")
@@ -784,6 +789,10 @@ def get_colab_folder(seed, prompt_group_index, style_group_index, to_mount=False
     root = pathlib.Path("/content/drive/MyDrive")
     target = root / folder
     target.mkdir(parents=True, exist_ok=True)
+
+    if experiment_folder:
+        target = target / experiment_folder
+        target.mkdir(parents=True, exist_ok=True)
 
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     out_dir = f"{target}/{ts}_seed{seed}_prompts{prompt_group_index}_styles{style_group_index}_vinjection"

@@ -217,7 +217,7 @@ class AnchorCache:
     
     def cache_attn_component(self, place_in_unet: str, t: int, type: str, key: torch.Tensor, masks: torch.Tensor):
         label = f"{place_in_unet}_{t}_{type}"
-        self.attn_cache[label] = [(key[i].shape, masks[i].nonzero(), key[masks[i]].flatten(dim=-2)) for i in len(key)]
+        self.attn_cache[label] = [(n_anchors, masks[i].nonzero(), key[masks[i]].flatten(dim=-2)) for i in len(key)]
 
     def get_attn_component(self, place_in_unet: str, t: int, type: str):
         label = f"{place_in_unet}_{t}_{type}"
