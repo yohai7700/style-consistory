@@ -463,16 +463,17 @@ def run_extra_generation(story_pipeline, prompts, concept_token,
     return out.images, img_all
     
 
-def run_generation_with_auto_anchors(prompts, n_anchors, **kwargs):
+def run_generation_with_auto_anchors(pipeline, prompts, n_anchors, **kwargs):
     anchor_prompts = prompts[:n_anchors]
     results, anchor_cache_first_stage, anchor_cache_second_stage = run_batch_generation(**kwargs, prompts=anchor_prompts, generate_anchors=True)
 
     extra_prompts = prompts[n_anchors:]
     for i, extra_prompt in enumerate(extra_prompts):
-        extra_results = run_batch_generation(**kwargs, 
+        extra_results = run_batch_generation(pipeline,
                                              prompts=[extra_prompt], 
                                              anchor_cache_first_stage=anchor_cache_first_stage, 
-                                             anchor_cache_second_stage=anchor_cache_second_stage
+                                             anchor_cache_second_stage=anchor_cache_second_stage,
+                                             **kwargs,
                                             )
         for result in extra_results:
             result.name = f"extra {i} - {result.name}"
