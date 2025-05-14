@@ -28,11 +28,11 @@ def invert_images(device):
     import torch
     from PIL import Image
 
-    from utils.ReNoise_Inversion.src.eunms import Model_Type, Scheduler_Type
-    from utils.ReNoise_Inversion.src.utils.enums_utils import get_pipes
-    from utils.ReNoise_Inversion.src.config import RunConfig
+    from utils.ReNoise.src.eunms import Model_Type, Scheduler_Type
+    from utils.ReNoise.src.utils.enums_utils import get_pipes
+    from utils.ReNoise.src.config import RunConfig
 
-    from utils.ReNoise_Inversion.main import run as invert
+    from utils.ReNoise.main import run as invert
 
 
     model_type = Model_Type.SDXL
