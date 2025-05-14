@@ -15,9 +15,50 @@ import gc
 import numpy as np
 from PIL import Image
 
+
+
 from utils.ptp_utils import AttentionStore, view_images
 
 LATENT_RESOLUTIONS = [32, 64]
+
+def invert_images(device):
+# def invert_images(image_paths, story_pipeline, seed, batch_size, same_latent, device, float_type):
+
+    # invert with the inversion pipeline 
+    import torch
+    from PIL import Image
+
+    from utils.ReNoise_Inversion.src.eunms import Model_Type, Scheduler_Type
+    from utils.ReNoise_Inversion.src.utils.enums_utils import get_pipes
+    from utils.ReNoise_Inversion.src.config import RunConfig
+
+    from utils.ReNoise_Inversion.main import run as invert
+
+
+    model_type = Model_Type.SDXL
+    scheduler_type = Scheduler_Type.DDIM
+    pipe_inversion, pipe_inference = get_pipes(model_type, scheduler_type, device=device)
+
+    input_image = Image.open("/utils/ReNoise_Inversion/example_images/lion.jpeg").convert("RGB").resize((1024, 1024))
+    prompt = "a lion in the field"
+
+    config = RunConfig(model_type = model_type,
+                        num_inference_steps = 50,
+                        num_inversion_steps = 50,
+                        num_renoise_steps = 1,
+                        scheduler_type = scheduler_type,
+                        perform_noise_correction = False,
+                        seed = 7865)
+
+    _, inv_latent, _, all_latents = invert(input_image,
+                                        prompt,
+                                        config,
+                                        pipe_inversion=pipe_inversion,
+                                        pipe_inference=pipe_inference,
+                                        do_reconstruction=False)
+    return inv_latent
+
+
 
 def load_pipeline(gpu_id=0, float_type=torch.float16):
     
@@ -90,12 +131,12 @@ class GenerationResult:
             image.save(f'{dir}/image_{i}.png')
         self.image_all.save(f'{dir}/all.png')
         
+
 # Batch inference
-def run_batch_generation(story_pipeline, prompts, concept_token,
+def run_batch_generation(story_pipeline, invert, image_paths, prompts, concept_token,
                         seed=40, n_steps=50, mask_dropout=0.5,
                         same_latent=False,record_queries=False,
                         share_queries=True,
-                        invert = False,
                         perform_sdsa=True, perform_consistory_injection=True,
                         perform_styled_injection=True,
                         downscale_rate=4, n_achors=2, 
@@ -123,11 +164,16 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     default_extended_attn_kwargs = {'extend_kv_unet_parts': ['up']}
     query_store_kwargs= {'t_range': [0,n_steps], 'strength_start': 0.9, 'strength_end': 0.81836735}
 
-    # if invert:
-    #     latents, noises = load_latents_or_invert_images(model=model, cfg=cfg)
-    #     model.set_latents(latents)
-    #     model.set_noise(noises)
+
     latents, g = create_latents(story_pipeline, seed, batch_size, same_latent, device, float_type)
+
+    if invert:
+        inverted_latent = invert_images(device)
+        latents[0] = inverted_latent
+        latents[1] = inverted_latent
+
+        prompts[0] = "a lion in the field"
+        prompts[1] = "a lion in the field"
 
     # ------------------ #
     # Extended attention First Run #

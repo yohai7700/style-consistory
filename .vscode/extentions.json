@@ -4,7 +4,8 @@
       "GitHub.copilot",
       "GitHub.copilot-chat",
       "ms-toolsai.jupyter", 
-      "ms-python.python"
+      "ms-python.python",
+      "ms-python.debugpy"
     ],
     "unwantedRecommendations": []
   }

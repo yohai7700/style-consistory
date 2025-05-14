@@ -180,6 +180,27 @@
 				"--attn_qk_range", "5","15",
             ]
         }
+		,
+		{
+            "name": "consistyle invert: colab_server_experiments_v100",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "consistory_CLI.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--run_experiments", "16,7,100",
+                "--out_dir", "out",
+				"--perform_consistory_injection","False",
+				"--mask_dropout", "0.05",
+				"--attn_v_range", "3","12",
+				"--attn_qk_range", "5","15",
+				"--invert", "True",
+				"--image_paths", "/Users/jannabruner/Desktop/toffee.png", 
+				"/Users/jannabruner/Desktop/toffee.png",
+				"--initial_prompts", "a cat sitting on the floor", "a cat sitting on the floor",
+            ]
+        }
 	]
 	}
 }

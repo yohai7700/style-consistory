@@ -12,9 +12,9 @@ import torch
 
 from experiments import make_experiment_grid_image, run_batch_experiment, write_metadata
 
-def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
+def run_batch(gpu, float_type, invert=False, seed=100, mask_dropout=0.5, same_latent=False,
               style="A photo of ", subject="a cute dog", concept_token=['dog'], prompts=None,
-              out_dir = None, record_queries=False, invert=False, perform_feature_injection_bg_adain=False,
+              out_dir = None, record_queries=False, image_paths=None, initial_prompts=None, perform_feature_injection_bg_adain=False,
                 perform_consistory_injection=False, run_experiments=None, attn_v_range=[3,10], attn_qk_range=[5,15]):
     
     print("Torch Cuda Available: ", torch.cuda.is_available())
@@ -27,6 +27,9 @@ def run_batch(gpu, float_type, seed=100, mask_dropout=0.5, same_latent=False,
             print(f"completed experiment, prompt group {prompt_group_index}, style group {style_group_index}, seed {seed}",)
             results = run_batch_experiment(
                 story_pipeline,
+                invert=invert,
+                image_paths=image_paths,
+                initial_prompts=initial_prompts,
                 prompt_group_index=prompt_group_index,
                 style_group_index=style_group_index,
                 seed=seed,
@@ -100,6 +103,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--record_queries', default=False, type=bool, required=False)
     parser.add_argument('--invert', default=False, type=bool, required=False)
+    parser.add_argument('--image_paths', default=None, type=str,nargs="*", required=False)
+    parser.add_argument('--initial_prompts', default=None, type=str, nargs="*", required=False)
 
     parser.add_argument('--out_dir', default=None, type=str, required=False)
     parser.add_argument('--perform_background_adain', default=True, type=bool, required=False)
@@ -128,9 +133,9 @@ if __name__ == '__main__':
         json.dump(vars(args), file, indent=4)
 
     if args.run_type == "batch":
-        run_batch(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 
+        run_batch(args.gpu, float_type, args.invert, args.seed, args.mask_dropout, args.same_latent, args.style, 
                   args.subject, args.concept_token, args.prompts, args.out_dir,args.record_queries,
-                  args.invert, args.perform_feature_injection_bg_adain, args.perform_consistory_injection,
+                  args.image_paths, args.initial_prompts, args.perform_feature_injection_bg_adain, args.perform_consistory_injection,
                     args.run_experiments, args.attn_v_range, args.attn_qk_range)
     elif args.run_type == "cached":
         run_cached_anchors(args.gpu, float_type, args.seed, args.mask_dropout, args.same_latent, args.style, 

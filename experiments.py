@@ -254,9 +254,9 @@ style_groups = [
         "lego style",
     ]),
 
-]
+]       
 
-def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
+def run_batch_experiment(pipeline, invert,image_paths, initial_prompts, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
                           same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], **kwargs):
     prompt_group = prompt_groups[prompt_group_index]
     style_group = style_groups[style_group_index]
@@ -265,8 +265,16 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         f"{prompt}, {style}"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
+
+    if initial_prompts is None:
+        # prompts = [new_prompt for new_prompt in initial_prompts]
+        for i in range(len(initial_prompts)):
+            prompts[i] = initial_prompts[i]
+
     colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
     results = run_batch_generation(pipeline,
+                                   invert=invert,
+                                   image_paths=image_paths,
                                    prompts=prompts, 
                                    concept_token=prompt_group.concept_tokens, 
                                    seed=seed,
