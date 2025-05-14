@@ -5,7 +5,7 @@ import pathlib
 from typing import List
 
 import matplotlib.pyplot as plt
-from consistory_run import run_batch_generation, GenerationResult
+from consistory_run import run_batch_generation, GenerationResult, run_generation_with_auto_anchors
 # from google import colab
 
 @dataclass
@@ -737,7 +737,7 @@ new_style_groups = [
 ]
 
 def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
-                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], **kwargs):
+                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], use_auto_anchors=False, **kwargs):
     prompt_group = prompt_groups[prompt_group_index]
     style_group = style_groups[style_group_index]
     
@@ -746,14 +746,15 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
     colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
-    results = run_batch_generation(pipeline,
-                                   prompts=prompts, 
-                                   concept_token=prompt_group.concept_tokens, 
-                                   seed=seed,
-                                   mask_dropout=mask_dropout,
-                                   attn_v_range=attn_v_range,
-                                   attn_qk_range=attn_qk_range,
-                                   **kwargs)
+    run_generation = run_generation_with_auto_anchors if use_auto_anchors else run_batch_generation
+    results = run_generation(pipeline,
+                    prompts=prompts, 
+                    concept_token=prompt_group.concept_tokens, 
+                    seed=seed,
+                    mask_dropout=mask_dropout,
+                    attn_v_range=attn_v_range,
+                    attn_qk_range=attn_qk_range,
+                    **kwargs)
     
     for result in results:
         result.save(colab_folder)

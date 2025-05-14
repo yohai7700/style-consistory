@@ -96,13 +96,21 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         same_latent=False,record_queries=False,
                         share_queries=True,
                         invert = False,
-                        perform_sdsa=True, perform_consistory_injection=True,
+                        perform_sdsa=True, 
+                        perform_consistory_injection=True,
                         perform_styled_injection=True,
-                        downscale_rate=4, n_achors=2, 
+                        downscale_rate=4,
+                        n_achors=2,
                         background_adain=None,
                         perform_original_sdxl=True,
                         use_target_heads=False,
-                        attn_v_range=[3,10], attn_qk_range=[5,15]):
+                        generate_anchors=False,
+                        attn_v_range=[3,10],
+                        attn_qk_range=[5,15],
+                        cache_cpu_offloading=False,
+                        anchor_cache_first_stage: AnchorCache = None,
+                        anchor_cache_second_stage: AnchorCache = None,
+                    ):
 
     device = story_pipeline.device
     tokenizer = story_pipeline.tokenizer
@@ -128,6 +136,17 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
     #     model.set_latents(latents)
     #     model.set_noise(noises)
     latents, g = create_latents(story_pipeline, seed, batch_size, same_latent, device, float_type)
+
+    validate_anchor_cache_params(anchor_cache_first_stage, anchor_cache_second_stage)
+
+    if generate_anchors:
+        anchor_cache_first_stage = AnchorCache()
+        anchor_cache_first_stage.set_mode_cache()
+        anchor_cache_second_stage = AnchorCache()
+        anchor_cache_second_stage.set_mode_cache()
+    elif anchor_cache_first_stage is not None:
+        anchor_cache_first_stage.set_mode_inject()
+        anchor_cache_second_stage.set_mode_inject()
 
     # ------------------ #
     # Extended attention First Run #
@@ -166,6 +185,7 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                         query_store_kwargs=query_store_kwargs,
                         callback_steps=n_steps,
                         num_inference_steps=n_steps,
+                        anchors_cache=anchor_cache_first_stage,
                         record_queries=False,
                         attnstore=attnstore)
     last_masks = story_pipeline.attention_store.last_mask
@@ -175,6 +195,13 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
 
     nn_map, nn_distances = cyclic_nn_map(dift_features, last_masks, LATENT_RESOLUTIONS, device)
     results.append(GenerationResult('first pass', out.images, downscale_rate=downscale_rate))
+
+    if generate_anchors:
+        anchor_cache_first_stage.dift_cache = dift_features
+        anchor_cache_first_stage.anchors_last_mask = last_masks
+
+        if cache_cpu_offloading:
+            anchor_cache_first_stage.to_device(torch.device('cpu'))    
     # results.append(GenerationResult('first pass masks 64', transform_masks_to_images(last_masks[64], batch_size), downscale_rate=downscale_rate))
 
     torch.cuda.empty_cache()
@@ -195,11 +222,12 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             feature_injector=feature_injector,
                             use_consistory_feature_injection=True,
                             use_styled_feature_injection=False,
+                            anchors_cache=anchor_cache_second_stage,
                             num_inference_steps=n_steps)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
         results.append(GenerationResult('consistory', out.images, downscale_rate=downscale_rate))
         
-        dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
+        # dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
         # results.append(GenerationResult('consistory dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
         torch.cuda.empty_cache()
         gc.collect()
@@ -220,16 +248,26 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
                             attnstore=attnstore,
                             num_inference_steps=n_steps,
                             attn_v_range=attn_v_range,
+                            anchors_cache=anchor_cache_second_stage,
                             attn_qk_range=attn_qk_range)
         # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
         results.append(GenerationResult(f'consistyle', out.images, downscale_rate=downscale_rate))
-        
-        dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
+        # dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
         # results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
+
+        if generate_anchors:
+            anchor_cache_second_stage.dift_cache = dift_features
+            anchor_cache_second_stage.anchors_last_mask = last_masks
+
+            if cache_cpu_offloading:
+                anchor_cache_second_stage.to_device(torch.device('cpu'))
         
         del attnstore
         torch.cuda.empty_cache()
         gc.collect()
+
+    if generate_anchors:
+        return results, anchor_cache_first_stage, anchor_cache_second_stage
         
     return results
 
@@ -423,6 +461,27 @@ def run_extra_generation(story_pipeline, prompts, concept_token,
         img_all = view_images([np.array(x) for x in out.images], display_image=False, downscale_rate=downscale_rate)
     
     return out.images, img_all
+    
+
+def run_generation_with_auto_anchors(prompts, n_anchors, **kwargs):
+    anchor_prompts = prompts[:n_anchors]
+    results, anchor_cache_first_stage, anchor_cache_second_stage = run_batch_generation(**kwargs, prompts=anchor_prompts, generate_anchors=True)
+
+    extra_prompts = prompts[n_anchors:]
+    for i, extra_prompt in enumerate(extra_prompts):
+        extra_results = run_batch_generation(**kwargs, 
+                                             prompts=[extra_prompt], 
+                                             anchor_cache_first_stage=anchor_cache_first_stage, 
+                                             anchor_cache_second_stage=anchor_cache_second_stage
+                                            )
+        results = [*results, *extra_results]
+    return results
 
 def transform_masks_to_images(masks, batch_size):
     return [Image.fromarray(mask.reshape(64, 64).cpu().numpy()) for mask in masks]
+
+
+def validate_anchor_cache_params(anchor_cache_first_stage: AnchorCache, anchor_cache_second_stage: AnchorCache):
+    if (anchor_cache_first_stage is not None and anchor_cache_second_stage is None) or \
+        (anchor_cache_first_stage is None and anchor_cache_second_stage is not None):
+        raise ValueError("Both anchor caches must be provided or none at all.")
