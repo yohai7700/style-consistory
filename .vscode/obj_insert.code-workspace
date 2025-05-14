@@ -172,7 +172,7 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "--run_experiments", "16,7,100",
+                "--run_experiments", "10,5,100",
                 "--out_dir", "out",
 				"--perform_consistory_injection","False",
 				"--mask_dropout", "0.05",

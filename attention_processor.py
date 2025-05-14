@@ -255,7 +255,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
 
                 # other_queries = self.attnstore.get_query(self.place_in_unet).to(value.device)
                 # _ , other_query_high_freq = self.fft_compose(query)
-
+                #5,15
                 if attn_qk_range[0]  <= self.attnstore.curr_iter <= attn_qk_range[1]: # key, query first pass, value sdxl vanila
                     nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
                     curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
@@ -268,7 +268,7 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                 
                     query[i][final_mask_tgt] = other_query 
                     key[i][final_mask_tgt] = other_key
-                    
+                # 3,10    
                 if attn_v_range[0] <= self.attnstore.curr_iter <= attn_v_range[1]:
                      value = self.attnstore.get_value(self.place_in_unet).to(value.device)
                 # if 5 <= self.attnstore.curr_iter <= 15:

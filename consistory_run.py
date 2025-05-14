@@ -39,7 +39,7 @@ def invert_images(device):
     scheduler_type = Scheduler_Type.DDIM
     pipe_inversion, pipe_inference = get_pipes(model_type, scheduler_type, device=device)
 
-    input_image = Image.open("/utils/ReNoise_Inversion/example_images/lion.jpeg").convert("RGB").resize((1024, 1024))
+    input_image = Image.open("./utils/ReNoise/example_images/lion.jpeg").convert("RGB").resize((1024, 1024))
     prompt = "a lion in the field"
 
     config = RunConfig(model_type = model_type,

@@ -233,11 +233,11 @@ style_groups = [
     ]),
     #5
     StyleGroup(styles=[
-        "low poly style",
-        "fantasy book illustration",
-        "minecraft style",
+        "lineart",
         "oil painting",
-        "lineart"
+        "minecraft style",
+        "Futuristic Biomechanical Cyberpunk",
+        "low poly",
     ]),
     #6
     StyleGroup(styles=[
