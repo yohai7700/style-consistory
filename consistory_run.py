@@ -474,6 +474,8 @@ def run_generation_with_auto_anchors(prompts, n_anchors, **kwargs):
                                              anchor_cache_first_stage=anchor_cache_first_stage, 
                                              anchor_cache_second_stage=anchor_cache_second_stage
                                             )
+        for result in extra_results:
+            result.name = f"extra {i} - {result.name}"
         results = [*results, *extra_results]
     return results
 
