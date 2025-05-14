@@ -128,10 +128,10 @@ prompt_groups = [
         concept_tokens=["kitten"],
         prompt_templates=[
             "{0} smelling a flower",
-            "{0} playing with a toy",
             "{0} climbing a tree",
+            "{0} playing with a toy",
             "{0} in the beach",
-            "{0} playing in the grass"
+            "{0} sleeping in a basket",
         ],
         subjects=["a kitten"]
     ),
@@ -186,7 +186,6 @@ prompt_groups = [
         subjects=["a boat"]
     ),
     # 16
-    PromptGroup(
     PromptGroup(
         concept_tokens=["dragon"],
         prompt_templates=[
@@ -794,12 +793,13 @@ style_groups = [
     ]),
     #5
     StyleGroup(styles=[
-        "low poly style",
-        "fantasy book illustration",
-        "minecraft style",
         "oil painting",
-        "lineart"
+        "lineart",
+        "origami style",
+        "Cyberpunk",
+        "claymation",
     ]),
+
     #6
     StyleGroup(styles=[
         "pixel art",
@@ -867,7 +867,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
 
-    seed = np.random.randint(0, 100000) if seed is None else seed
+    # seed = np.random.randint(0, 100000) if seed is None else seed
 
     colab_folder= get_colab_folder(seed,subject_name, prompt_group_index, style_group_index)
     run_generation = run_generation_with_auto_anchors if use_auto_anchors else run_batch_generation

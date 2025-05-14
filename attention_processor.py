@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.fft as fft
 from PIL import Image
-import torchvision.transforms as T
+# import torchvision.transforms as T
 
 
 
@@ -269,8 +269,8 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     query[i][final_mask_tgt] = other_query 
                     key[i][final_mask_tgt] = other_key
                     
-                if attn_v_range[0] <= self.attnstore.curr_iter <= attn_v_range[1]:
-                     value = self.attnstore.get_value(self.place_in_unet).to(value.device)
+                if attn_v_range[0] <= self.attnstore.curr_iter <= attn_v_range[1]: 
+                    value = self.attnstore.get_value(self.place_in_unet).to(value.device)
                 # if 5 <= self.attnstore.curr_iter <= 15:
                 #     other_value = value[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 #     value[i][final_mask_tgt] *= 0
