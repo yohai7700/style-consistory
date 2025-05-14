@@ -32,6 +32,25 @@ class FeatureInjector:
         self.background_adain = background_adain
         self.background_self_alignment_range = background_self_alignment_range
         
+    def get_anchors_nn_map(self, i, output_res):
+        if output_res not in self.inject_res:
+            return None
+        
+        nn_map = self.nn_map[output_res]
+        nn_distances = self.nn_distances[output_res]
+        attn_masks = self.attn_masks[output_res]
+        vector_dim = output_res**2
+        
+        min_dists = nn_distances[i].argmin(dim=0)
+        curr_nn_map = nn_map[i][min_dists, torch.arange(vector_dim)]
+
+        curr_nn_distances = nn_distances[i][min_dists, torch.arange(vector_dim)]
+        dist_thr = get_dynamic_threshold(curr_nn_distances) if self.dist_thr == 'dynamic' else self.dist_thr
+        dist_mask = curr_nn_distances < dist_thr
+        final_mask_tgt = attn_masks[i] & dist_mask
+        
+        return min_dists, curr_nn_map, final_mask_tgt
+
     def get_nn_map(self, i, output_res, extended_mapping):
         if output_res not in self.inject_res:
             return None
@@ -196,9 +215,9 @@ class AnchorCache:
     def is_cache_mode(self):
         return self.mode == 'cache'
     
-    def cache_attn_component(self, place_in_unet: str, t: int, type: str, key: torch.Tensor, mask: torch.Tensor):
+    def cache_attn_component(self, place_in_unet: str, t: int, type: str, key: torch.Tensor, masks: torch.Tensor):
         label = f"{place_in_unet}_{t}_{type}"
-        self.attn_cache[label] = (key.shape, mask.nonzero(), key[mask].flatten(dim=-2))
+        self.attn_cache[label] = [(key[i].shape, masks[i].nonzero(), key[masks[i]].flatten(dim=-2)) for i in len(key)]
 
     def get_attn_component(self, place_in_unet: str, t: int, type: str):
         label = f"{place_in_unet}_{t}_{type}"

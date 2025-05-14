@@ -250,24 +250,38 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         #     self.attnstore.record_query(self.place_in_unet, query)
         
         if use_styled_feature_injection and feature_injector is not None and curr_unet_part == 'up' and width == 64:
+            anchor_key = None
+            anchor_query = None
             if anchors_cache:
                 if anchors_cache.is_cache_mode():
                     for i in range(batch_size //2):
-                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "k", key[i + batch_size//2], self.attnstore.get_attn_mask(width, i))
-                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "q", query[i + batch_size//2], self.attnstore.get_attn_mask(width, i))
+                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "k", key[batch_size//2:], self.attnstore.last_mask_dropout[width])
+                        anchors_cache.cache_attn_component(self.place_in_unet, self.attnstore.curr_iter, "q", query[batch_size//2:], self.attnstore.last_mask_dropout[width])
+                elif anchors_cache.is_inject_mode():
+                    anchor_key = anchors_cache.get_attn_component(self.place_in_unet, self.attnstore.curr_iter, "k").to(key.device)
+                    anchor_query = anchors_cache.get_attn_component(self.place_in_unet, self.attnstore.curr_iter, "q").to(query.device)
             for i in range(batch_size //2, batch_size):
                 # other_queries = self.attnstore.get_query(self.place_in_unet).to(value.device)
                 # _ , other_query_high_freq = self.fft_compose(query)
 
                 if attn_qk_range[0]  <= self.attnstore.curr_iter <= attn_qk_range[1]: # key, query first pass, value sdxl vanila
-                    nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
-                    curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
+                    if anchors_cache:
+                        nn_map = feature_injector.get_anchors_nn_map(i % (batch_size //2), width)
+                        min_dists, curr_nn_map, final_mask_tgt = nn_map
+                    else:
+                        nn_map = feature_injector.get_nn_map(i % (batch_size //2), width, self.attnstore.extended_mapping)
+                        curr_mapping, min_dists, curr_nn_map, final_mask_tgt = nn_map
 
                     # key = self.attnstore.get_key(self.place_in_unet).to(value.device)
                     # _ , other_query_high_freq = self.fft_compose(query)
+                    
+                    if not anchors_cache:
+                        anchor_key = key[batch_size//2:][curr_mapping]
+                    if not anchors_cache:
+                        anchor_query = query[batch_size//2:][curr_mapping]
 
-                    other_query = query[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
-                    other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
+                    other_query = anchor_query[min_dists, curr_nn_map][final_mask_tgt]
+                    other_key = anchor_key[min_dists, curr_nn_map][final_mask_tgt]
                 
                     query[i][final_mask_tgt] = other_query 
                     key[i][final_mask_tgt] = other_key
