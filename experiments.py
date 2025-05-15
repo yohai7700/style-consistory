@@ -22,7 +22,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
 
-    seed = torch.seed()
+    # seed = torch.seed()
     colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
 
     bsz = 5
@@ -45,10 +45,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
             results = extra_results
         else:
             for i in range(len(extra_results)):
-                results[i].images.extend(extra_results[i].images)
-                
-        for result in extra_results[n_anchors:]:
-            results.append(result)
+                results[i].images.extend(extra_results[i].images[n_anchors:])
     
     for result in results:
         result.save(colab_folder)
@@ -113,7 +110,7 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
 #     make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
 #     return results
 
-def get_colab_folder(seed,subject_name, prompt_group_index, style_group_index, to_mount=False):
+def get_colab_folder(seed, prompt_group_index, style_group_index, to_mount=False):
     # if to_mount:
     #     from google import colab
     #     colab.drive.mount("/content/drive")
