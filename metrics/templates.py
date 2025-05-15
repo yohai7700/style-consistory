@@ -225,7 +225,7 @@ new_prompt_groups = [
             "{0} riding a bicycle down a hill",
             "{0} feeding ducks at a pond",
             "{0} looking through a telescope",
-            "{0} playing with a puppy",
+            # "{0} playing with a puppy",
         ],
         subjects=["a boy"]
     ),
@@ -260,7 +260,7 @@ new_prompt_groups = [
             "{0} digging a hole in the garden",
             "{0} riding in a car with head out the window",
             "{0} balancing a treat on its nose",
-            "{0} playing in a pile of leaves",
+            # "{0} playing in a pile of leaves",
         ],
         subjects=["a dog"]
     ),
@@ -297,7 +297,7 @@ new_prompt_groups = [
             "{0} breathing fire",
             "{0} reflected in a crystal lake",
             "{0} roaring beneath storm clouds",
-            "{0} resting on a bed of flowers",
+            # "{0} resting on a bed of flowers",
         ],
         subjects=["a cute dragon"]
     ),
@@ -366,7 +366,7 @@ new_prompt_groups = [
             "{0} painting watercolor flowers",
             "{0} exploring a science museum",
             "{0} playing violin on stage",
-            "{0} wearing a flower crown",
+            # "{0} wearing a flower crown",
         ],
         subjects=["a carefree girl with braided hair and bright freckles"]
     ),
@@ -404,7 +404,7 @@ new_prompt_groups = [
             "{0} chasing a laser pointer",
             "{0} wearing a tiny sweater",
             "{0} batting at dangling string",
-            "{0} curled up in a basket",
+            # "{0} curled up in a basket",
         ],
         subjects=["a mischievous tabby cat with bright green eyes"]
     ),
@@ -440,7 +440,7 @@ new_prompt_groups = [
             "{0} drinking from a crystal stream",
             "{0} guarding a silver gate",
             "{0} leaving sparkling hoofprints",
-            "{0} surrounded by glowing butterflies",
+            # "{0} surrounded by glowing butterflies",
         ],
         subjects=["a shimmering unicorn with a spiraled silver horn"]
     ),
@@ -476,7 +476,7 @@ new_prompt_groups = [
             "{0} hanging from a wooden post",
             "{0} surrounded by fireflies",
             "{0} reflecting in a puddle after rain",
-            "{0} casting shadows on temple walls",
+            # "{0} casting shadows on temple walls",
         ],
         subjects=["an antique brass lantern with warm flickering light"]
     ),
@@ -511,7 +511,7 @@ new_prompt_groups = [
             "{0} learning to ride a scooter",
             "{0} swinging high on a swing set",
             "{0} wearing a superhero costume",
-            "{0} drawing with chalk on the sidewalk",
+            # "{0} drawing with chalk on the sidewalk",
         ],
         subjects=["a kid"]
     ),
@@ -548,7 +548,7 @@ new_prompt_groups = [
             "{0} playing with a toy",
             "{0} peeking out of a box",
             "{0} wearing a tiny hat",
-            "{0} chasing a feather",
+            # "{0} chasing a feather",
         ],
         subjects=["a kitten"]
     ),
@@ -585,7 +585,7 @@ new_prompt_groups = [
             "{0} soaring over volcanic peaks",
             "{0} casting light on ruined temples",
             "{0} exploding into radiant feathers",
-            "{0} illuminating a dark forest",
+            # "{0} illuminating a dark forest",
         ],
         subjects=["a phoenix"]
     ),
@@ -620,7 +620,7 @@ new_prompt_groups = [
             "{0} lying on a velvet pillow",
             "{0} shining in a display case",
             "{0} bathed in moonlight",
-            "{0} reflecting a sunset",
+            # "{0} reflecting a sunset",
         ],
         subjects=["a sword"]
     ),
@@ -656,7 +656,7 @@ new_prompt_groups = [
             "{0} strumming guitar on a balcony",
             "{0} meditating near a waterfall",
             "{0} playing chess in a plaza",
-            "{0} hiking in a national park",
+            # "{0} hiking in a national park",
         ],
         subjects=["a thoughtful young man wearing round glasses"]
     ),
@@ -691,7 +691,7 @@ new_prompt_groups = [
             "{0} swimming alongside divers",
             "{0} silhouetted against the sunrise",
             "{0} splashing a tourist",
-            "{0} playing with a beach ball",
+            # "{0} playing with a beach ball",
         ],
         subjects=["a playful dolphin leaping over sparkling waves"]
     ),
@@ -726,7 +726,7 @@ new_prompt_groups = [
             "{0} polishing stolen treasure",
             "{0} riding a giant rat",
             "{0} hiding behind a tree",
-            "{0} playing tricks on travelers",
+            # "{0} playing tricks on travelers",
         ],
         subjects=["a sneaky goblin with crooked teeth and tattered clothes"]
     ),
@@ -763,7 +763,7 @@ new_prompt_groups = [
             "{0} floating amid glowing runes",
             "{0} lying in dewy grass",
             "{0} stacked with ancient tomes",
-            "{0} surrounded by flickering candles",
+            # "{0} surrounded by flickering candles",
         ],
         subjects=["a weathered leather-bound book glowing with arcane runes"]
     ),
@@ -798,7 +798,7 @@ new_prompt_groups = [
             "{0} laughing with friends in a park",
             "{0} reading poetry on a beach",
             "{0} playing violin in an orchestra",
-            "{0} near the Pizzas of Pisa",
+            # "{0} near the Pizzas of Pisa",
         ],
         subjects=["a woman"]
     ),
@@ -833,7 +833,7 @@ new_prompt_groups = [
             "{0} rolling down a hill",
             "{0} peeking over tall grass",
             "{0} yawning at sunrise",
-            "{0} wearing sunglusses and drinking margarita"
+            # "{0} wearing sunglusses and drinking margarita"
         ],
         subjects=["a panda"]
     ),
@@ -868,7 +868,7 @@ new_prompt_groups = [
             "{0} combing hair with a shell",
             "{0} holding a trident",
             "{0} basking on a warm sandbar",
-            "{0} surrounded by colorful fish",
+            # "{0} surrounded by colorful fish",
         ],
         subjects=["a mermaid"]
     ),
@@ -903,7 +903,7 @@ new_prompt_groups = [
             "{0} resting on a tripod",
             "{0} shooting long-exposure stars",
             "{0} partially submerged in water",
-            "{0} reflecting in a café window",
+            # "{0} reflecting in a café window",
         ],
         subjects=["a camera"]
     ),
@@ -938,7 +938,7 @@ new_prompt_groups = [
             "{0} feeding pigeons on a bench",
             "{0} watching birds through binoculars",
             "{0} napping under a maple tree",
-            "{0} sharing stories with grandchildren",
+            # "{0} sharing stories with grandchildren",
         ],
         subjects=["a gentle grandpa with a white beard and tweed cap"]
     ),
@@ -975,7 +975,7 @@ new_prompt_groups = [
             "{0} curled up in a ball",
             "{0} scampering on a forest floor",
             "{0} hiding beneath a leaf umbrella",
-            "{0} peeking out from a burrow",
+            # "{0} peeking out from a burrow",
         ],
         subjects=["a cute hedgehog with prickly fur"]
     ),
@@ -1010,7 +1010,7 @@ new_prompt_groups = [
             "{0} spreading powerful wings",
             "{0} diving through storm clouds",
             "{0} silhouetted by a full moon",
-            "{0} soaring over a shimmering lake",
+            # "{0} soaring over a shimmering lake",
         ],
         subjects=["a regal griffin with lion body and eagle head"]
     ),
@@ -1047,7 +1047,7 @@ new_prompt_groups = [
             "{0} docking with a space station",
             "{0} flying low over a futuristic city",
             "{0} hidden in a lunar crater",
-            "{0} surrounded by colorful nebulae",
+            # "{0} surrounded by colorful nebulae",
         ],
         subjects=["a retro-futuristic silver spaceship with glowing thrusters"]
     ),
@@ -1082,7 +1082,7 @@ new_prompt_groups = [
             "{0} watering roses in her garden",
             "{0} feeding ducks at a pond",
             "{0} writing in a journal",
-            "{0} cool gangstar, dancing at the party ",
+            # "{0} cool gangstar, dancing at the party ",
         ],
         subjects=["a grandma"]
     ),
@@ -1191,7 +1191,6 @@ new_style_groups = [
 
 def create_experiment_list():
     from metrics.templates import new_prompt_groups, new_style_groups
-    import random
 
     # Constants
     num_prompts = len(new_prompt_groups) 
@@ -1220,3 +1219,15 @@ def create_experiment_list():
     output_series = ";".join(series)
     return output_series
 
+for i in range(25):
+    start_prompt =i*3
+    end_prompt = start_prompt + 3
+
+    seed = random.randint(0, 10000)
+    for j in range(2):
+        start_style = j*3
+        end_style =  start_style +3
+
+        for k in range(start_prompt, end_prompt):
+            for l in range(start_style, end_style):
+                print(f"{k},{l},{seed}")

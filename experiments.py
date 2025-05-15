@@ -4,38 +4,51 @@ import json
 import pathlib
 from typing import List
 
+import torch
 import matplotlib.pyplot as plt
 from consistory_run import run_batch_generation, GenerationResult
 # from google import colab
 import numpy as np
-from metrics.templates import new_prompt_groups, new_style_groups
-
+from metrics.template_v1 import new_prompt_groups, new_style_groups
 
 
 def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
-                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], use_auto_anchors=False, **kwargs):
+                          same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], use_auto_anchors=False, n_anchors=2, **kwargs):
     prompt_group = new_prompt_groups[prompt_group_index]
     style_group = new_style_groups[style_group_index]
     
-    subject_name = prompt_group.concept_tokens[0]
     prompts = [
         f"{prompt}, {style}"
         for style, prompt in zip(style_group.styles, prompt_group.prompts)
     ]
 
-    # seed = np.random.randint(0, 100000) if seed is None else seed
+    seed = torch.seed()
+    colab_folder= get_colab_folder(seed, prompt_group_index, style_group_index)
 
-    colab_folder= get_colab_folder(seed,subject_name, prompt_group_index, style_group_index)
-    # run_generation = run_generation_with_auto_anchors if use_auto_anchors else run_batch_generation
+    bsz = 5
+    anchor_prompts = prompts[:n_anchors]
 
-    results = run_batch_generation(pipeline,
-                    prompts=prompts, 
-                    concept_token=prompt_group.concept_tokens, 
-                    seed=seed,
-                    mask_dropout=mask_dropout,
-                    attn_v_range=attn_v_range,
-                    attn_qk_range=attn_qk_range,
-                    **kwargs)
+    results = []
+    for i in range(n_anchors, len(prompts), bsz-n_anchors):
+        current_prompts = [*anchor_prompts, *prompts[i:i+bsz-n_anchors]]
+        extra_results = run_batch_generation(pipeline,
+                                             prompts=current_prompts,
+                                             n_achors=n_anchors,
+                                             concept_token=prompt_group.concept_tokens, 
+                                             seed=seed,
+                                             mask_dropout=mask_dropout,
+                                             attn_v_range=attn_v_range,
+                                             attn_qk_range=attn_qk_range,
+                                             **kwargs,
+                                            )
+        if i == n_anchors:
+            results = extra_results
+        else:
+            for i in range(len(extra_results)):
+                results[i].images.extend(extra_results[i].images)
+                
+        for result in extra_results[n_anchors:]:
+            results.append(result)
     
     for result in results:
         result.save(colab_folder)
@@ -56,12 +69,56 @@ def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=1
     make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
     return results
 
+# def run_batch_experiment(pipeline, prompt_group_index, style_group_index, seed=100, mask_dropout=0.5,
+#                           same_latent=False,attn_v_range=[3,10],attn_qk_range=[5,15], use_auto_anchors=False, **kwargs):
+#     prompt_group = new_prompt_groups[prompt_group_index]
+#     style_group = new_style_groups[style_group_index]
+    
+#     subject_name = prompt_group.concept_tokens[0]
+#     prompts = [
+#         f"{prompt}, {style}"
+#         for style, prompt in zip(style_group.styles, prompt_group.prompts)
+#     ]
+
+#     # seed = np.random.randint(0, 100000) if seed is None else seed
+
+#     colab_folder= get_colab_folder(seed,subject_name, prompt_group_index, style_group_index)
+#     # run_generation = run_generation_with_auto_anchors if use_auto_anchors else run_batch_generation
+
+#     results = run_batch_generation(pipeline,
+#                     prompts=prompts, 
+#                     concept_token=prompt_group.concept_tokens, 
+#                     seed=seed,
+#                     mask_dropout=mask_dropout,
+#                     attn_v_range=attn_v_range,
+#                     attn_qk_range=attn_qk_range,
+#                     **kwargs)
+    
+#     for result in results:
+#         result.save(colab_folder)
+#         print(f"Saved {result.name} to {colab_folder}")
+        
+#     write_metadata(f"{colab_folder}/metadata.json", {
+#         "prompt_group_index": prompt_group_index,
+#         "style_group_index": style_group_index,
+#         "seed": seed,
+#         "attn_v_range": attn_v_range,
+#         "attn_qk_range": attn_qk_range,
+#         "mask_dropout": mask_dropout,
+#         "same_latent": same_latent,
+#         "prompts": prompts,
+#         "concept_tokens": prompt_group.concept_tokens,
+#         "styles": style_group.styles
+#     })
+#     make_experiment_grid_image(results, prompts, save_path=f"{colab_folder}/results-grid.png")
+#     return results
+
 def get_colab_folder(seed,subject_name, prompt_group_index, style_group_index, to_mount=False):
     # if to_mount:
     #     from google import colab
     #     colab.drive.mount("/content/drive")
     
-    folder = "Consistyle - Experiments/evaluations/{}".format(subject_name)
+    folder = "Consistyle - Experiments/evaluations2/"
     root = pathlib.Path("/content/drive/MyDrive")
     target = root / folder
     target.mkdir(parents=True, exist_ok=True)
