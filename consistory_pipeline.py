@@ -100,6 +100,8 @@ class ConsistoryExtendAttnSDXLPipeline(
         attn_v_range = [3,10],
         attn_qk_range = [5,15],
         attnstore: AttentionStore = None,
+        no_attn_q = False,
+        no_attn_k = False,
         **kwargs,
     ):
         r"""
@@ -460,6 +462,8 @@ class ConsistoryExtendAttnSDXLPipeline(
                                                 'record_queries': record_queries,
                                                 'attn_v_range': attn_v_range,
                                                 'attn_qk_range': attn_qk_range,
+                                                'no_attn_q': no_attn_q,
+                                                'no_attn_k': no_attn_k,
                                                 'anchors_cache': anchors_cache},
                         added_cond_kwargs=added_cond_kwargs,
                         return_dict=False,

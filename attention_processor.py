@@ -172,6 +172,8 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
         record_queries = False,
         attn_v_range=[3,10],
         attn_qk_range=[5,15],
+        no_attn_q = False,
+        no_attn_k = False,
         **kwargs
     ) -> torch.FloatTensor:
         residual = hidden_states
@@ -266,8 +268,10 @@ class ConsistoryExtendedAttnXFormersAttnProcessor:
                     other_query = query[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                     other_key = key[batch_size//2:][curr_mapping][min_dists, curr_nn_map][final_mask_tgt]
                 
-                    query[i][final_mask_tgt] = other_query 
-                    key[i][final_mask_tgt] = other_key
+                    if not no_attn_q:
+                      query[i][final_mask_tgt] = other_query 
+                    if not no_attn_k:
+                      key[i][final_mask_tgt] = other_key
                     
                 if attn_v_range[0] <= self.attnstore.curr_iter <= attn_v_range[1]: 
                     value = self.attnstore.get_value(self.place_in_unet).to(value.device)
