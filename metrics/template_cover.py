@@ -20,11 +20,11 @@ new_prompt_groups = [
     PromptGroup(
         concept_tokens=["puppy"],
         prompt_templates=[
-            "A Minecraft-style puppy built from voxel blocks, sitting beside a pixelated campfire under a starry night sky, surrounded by blocky trees and mountains, with a tiny bone in its mouth.",
             "A digitally painted puppy lying on an artist’s desk surrounded by paintbrushes, spilled watercolors, and open sketchbooks, bathed in soft morning light from a nearby window.",
-            "A low-poly puppy exploring an alien desert landscape with colorful crystal formations and polygonal cacti, under a surreal sunset sky with faceted clouds.",
             "A film noir puppy sitting in a dark alleyway wearing a tiny trench coat and fedora, backlit by a flickering streetlamp, with shadows of mysterious figures cast on the brick walls.",
+            "A low-poly puppy exploring an alien desert landscape with colorful crystal formations and polygonal cacti, under a surreal sunset sky with faceted clouds.",
             "A pop art puppy jumping out of a comic panel, surrounded by explosive text like “BARK!” and “WOW!”, set in a vibrant cityscape with neon signs, speech bubbles, and halftone textures.",
+            "A Minecraft-style puppy built from voxel blocks, sitting beside a pixelated campfire under a starry night sky, surrounded by blocky trees and mountains, with a tiny bone in its mouth.",
             "An origami-style puppy delicately folded from patterned paper, standing on a wooden table beside scattered origami cranes and instruction sheets, illuminated by warm afternoon light filtering through a rice paper window.",
         ],
         subjects=["a puppy"]
