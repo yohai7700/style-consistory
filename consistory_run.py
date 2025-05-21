@@ -277,6 +277,29 @@ def run_batch_generation(story_pipeline, prompts, concept_token,
         torch.cuda.empty_cache()
         gc.collect()
         
+        
+        out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
+                            attention_store_kwargs=default_attention_store_kwargs,
+                            extended_attn_kwargs=extended_attn_kwargs,
+                            share_queries=share_queries,
+                            query_store_kwargs=query_store_kwargs,
+                            feature_injector=feature_injector,
+                            use_styled_feature_injection=True,
+                            use_first_half_target_heads=use_target_heads,
+                            use_consistory_feature_injection=False,
+                            attnstore=attnstore,
+                            num_inference_steps=n_steps,
+                            attn_v_range=[-1, -1],
+                            attn_qk_range=attn_qk_range)
+        # display_attn_maps(story_pipeline.attention_store.last_mask, out.images)
+        results.append(GenerationResult(f'consistyle_no_v', out.images, downscale_rate=downscale_rate))
+        
+        # dift_masks = [feature_injector.get_nn_map(i, 64, anchor_mappings)[3] for i in range(batch_size)]
+        # results.append(GenerationResult('consistyle dift masks', transform_masks_to_images(dift_masks, batch_size), downscale_rate=downscale_rate))
+        
+        torch.cuda.empty_cache()
+        gc.collect()
+        
         out = story_pipeline(prompt=prompts, generator=g, latents=latents, 
                             attention_store_kwargs=default_attention_store_kwargs,
                             extended_attn_kwargs=extended_attn_kwargs,
