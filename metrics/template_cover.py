@@ -29,7 +29,32 @@ new_prompt_groups = [
         ],
         subjects=["a puppy"]
     ),
+    
+    PromptGroup(
+        concept_tokens=["girl"],
+        prompt_templates=[
+            "portrait of {0} wearing headphones",
+            "portrait of {0} having a picnic",
+            "portrait of {0} in the snow",
+            "portrait of {0}, Eiifel Tower in the background",
+            "portrait of {0} hiking in the mountains",
+            "portrait of {0} in a futuristic city",
+        ],
+        subjects=["a happy girl"]
+    ),
 ]
+PromptGroup(
+        concept_tokens=["dragon"],
+        prompt_templates=[
+            "{0} flying over a mountain",
+            "{0} breathing fire",
+            "{0} perched on a cliff",
+            "{0} guarding a treasure",
+            "{0} soaring through the clouds",
+            "{0} sleeping in a cave",
+        ],
+        subjects=["a cute dragon"]
+),
 
 new_style_groups = [
     # 1 – Second group with 10 styles
@@ -40,5 +65,23 @@ new_style_groups = [
         "",
         "",
         "",
+    ]),
+
+        StyleGroup(styles=[
+        "anime drawing",
+        "realistic photo",
+        "B&W sketch",
+        "watercolor painting",
+        "pixel art",
+        "oil painting",
+    ]),
+        StyleGroup(styles=[
+        "fantasy art",
+        "dramatic drawing",
+        "book cover",
+        "3D animation",
+        "lego style",
+        "lineart",
+
     ]),
 ]
